@@ -195,5 +195,6 @@ where
     unusedImports(sel, msg)
   ) and
   // avoid reporting if the definition is unreachable
-  sel.getFirstControlFlowNode().getBasicBlock() instanceof ReachableBasicBlock
+  sel.getFirstControlFlowNode().getBasicBlock() instanceof ReachableBasicBlock and
+  not sel.getFile().getFileType() = "markdown"
 select sel, msg

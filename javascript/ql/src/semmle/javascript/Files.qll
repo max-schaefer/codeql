@@ -249,7 +249,8 @@ class FileType extends string {
     this = "html" or
     this = "typescript" or
     this = "json" or
-    this = "yaml"
+    this = "yaml" or
+    this = "markdown"
   }
 
   /**

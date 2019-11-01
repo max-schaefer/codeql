@@ -66,5 +66,6 @@ where
     if dead instanceof VariableDeclarator
     then msg = "The initial value of " + v.getName() + " is unused, since it is always overwritten."
     else msg = "This definition of " + v.getName() + " is useless, since its value is never read."
-  )
+  )  and
+  not dead.getFile().getFileType() = "markdown"
 select dead, msg

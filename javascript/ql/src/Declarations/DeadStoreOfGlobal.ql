@@ -35,5 +35,6 @@ where
   // it isn't declared using a linter directive
   not exists(Linting::GlobalDeclaration decl | decl.declaresGlobalForAccess(gva)) and
   // ignore accesses under 'with', since they may well refer to properties of the with'ed object
-  not exists(WithStmt with | with.mayAffect(gva))
+  not exists(WithStmt with | with.mayAffect(gva)) and
+  not gva.getFile().getFileType() = "markdown"
 select gva, "This definition of " + v.getName() + " is useless, since its value is never read."

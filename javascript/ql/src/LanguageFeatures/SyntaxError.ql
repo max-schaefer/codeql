@@ -13,4 +13,5 @@
 import javascript
 
 from JSParseError pe
+where not pe.getFile().getFileType() = "markdown"
 select pe, pe.getMessage()

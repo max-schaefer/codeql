@@ -130,5 +130,6 @@ where
   not exists(FunctionExpr fe, ExprStmt es | fe = e |
     fe = es.getExpr() and
     not exists(fe.getName())
-  )
+  ) and
+  not e.getFile().getFileType() = "markdown"
 select e.(FirstLineOf), "This expression has no effect."
