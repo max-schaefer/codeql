@@ -367,10 +367,11 @@ public class AutoBuild {
     // exclude all files with extensions
     patterns.add("-**/*.*");
 
-    // but include HTML, JavaScript, YAML and (optionally) TypeScript
+    // but include HTML, JavaScript, Markdown, YAML and (optionally) TypeScript
     Set<FileType> defaultExtract = new LinkedHashSet<FileType>();
     defaultExtract.add(FileType.HTML);
     defaultExtract.add(FileType.JS);
+    defaultExtract.add(FileType.MARKDOWN);
     defaultExtract.add(FileType.YAML);
     if (typeScriptMode != TypeScriptMode.NONE) defaultExtract.add(FileType.TYPESCRIPT);
     for (FileType filetype : defaultExtract)

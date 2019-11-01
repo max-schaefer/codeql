@@ -585,4 +585,13 @@ public class AutoBuildTests {
     addFile(true, LGTM_SRC, "tst.qhelp");
     runTest();
   }
+
+  @Test
+  public void markdownExtracted() throws IOException {
+    addFile(true, LGTM_SRC, "README.md");
+    addFile(false, LGTM_SRC, "README");
+    addFile(false, LGTM_SRC, "README.txt");
+    addFile(true, LGTM_SRC, "examples.markdown");
+    runTest();
+  }
 }

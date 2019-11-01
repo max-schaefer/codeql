@@ -55,6 +55,18 @@ public class FileExtractor {
       }
     },
 
+    MARKDOWN(".md", ".markdown") {
+      @Override
+      public IExtractor mkExtractor(ExtractorConfig config, ExtractorState state) {
+        return new MarkdownExtractor(config);
+      }
+
+      @Override
+      public String toString() {
+        return "markdown";
+      }
+    },
+
     JS(".js", ".jsx", ".mjs", ".es6", ".es") {
       @Override
       public IExtractor mkExtractor(ExtractorConfig config, ExtractorState state) {
