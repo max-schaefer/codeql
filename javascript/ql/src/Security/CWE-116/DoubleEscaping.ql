@@ -167,6 +167,57 @@ class JsonParseReplacement extends Replacement {
   override DataFlow::SourceNode getOutput() { result = self.getOutput() }
 }
 
+/**
+ * Gets the URI-encoded equivalent of `s`.
+ *
+ * This predicate only handles a few of the most important meta-characters.
+ */
+string uriEncode(string s) {
+  s = "\"" and result = "%22"
+  or
+  s = "%" and result = "%25"
+  or
+  s = "&" and result = "%26"
+  or
+  s = "<" and result = "%3C"
+  or
+  s = ">" and result = "%3E"
+  or
+  s = "\\" and result = "%5C"
+}
+
+/**
+ * A call to `encodeURI` or `encodeURIComponent`, viewed as a string replacement.
+ */
+class UriEncoding extends Replacement, DataFlow::CallNode {
+  UriEncoding() {
+    this = DataFlow::globalVarRef("encodeURI").getACall() or
+    this = DataFlow::globalVarRef("encodeURIComponent").getACall()
+  }
+
+  override predicate replaces(string input, string output) { output = uriEncode(input) }
+
+  override DataFlow::Node getInput() { result = this.getArgument(0) }
+
+  override DataFlow::SourceNode getOutput() { result = this }
+}
+
+/**
+ * A call to `decodeURI` or `decodeURIComponent`, viewed as a string replacement.
+ */
+class UriDecoding extends Replacement, DataFlow::CallNode {
+  UriDecoding() {
+    this = DataFlow::globalVarRef("decodeURI").getACall() or
+    this = DataFlow::globalVarRef("decodeURIComponent").getACall()
+  }
+
+  override predicate replaces(string input, string output) { input = uriEncode(output) }
+
+  override DataFlow::Node getInput() { result = this.getArgument(0) }
+
+  override DataFlow::SourceNode getOutput() { result = this }
+}
+
 class EscapingStatus extends DataFlow::FlowLabel {
   EscapingStatus() {
     exists(Replacement replacement, string metachar |
@@ -224,15 +275,23 @@ class Configuration extends DataFlow::Configuration {
     )
   }
 
-  override predicate isSink(DataFlow::Node nd, DataFlow::FlowLabel lbl) { isSink(_, nd, lbl) }
+  override predicate isSink(DataFlow::Node nd, DataFlow::FlowLabel lbl) { isSink(_, nd, lbl, _) }
 
-  predicate isSink(Replacement r, DataFlow::Node nd, DataFlow::FlowLabel lbl) {
+  predicate isSink(Replacement r, DataFlow::Node nd, DataFlow::FlowLabel lbl, string kind) {
     exists(string metachar | nd = r.getInput() |
       lbl = "escaped(" + metachar + ")" and
-      r.escapes(metachar, _)
+      r.escapes(metachar, _) and
+      kind = "double escaping " + metachar
       or
       lbl = "unescaped(" + metachar + ")" and
-      r.unescapes(metachar, _)
+      r.unescapes(metachar, _) and
+      kind = "double unescaping " + metachar
+      or
+      exists(string otherMetachar | otherMetachar != metachar |
+        lbl = "escaped(" + metachar + ")" and
+        r.unescapes(otherMetachar, _) and
+        kind = "nullified escaping " + metachar
+      )
     )
   }
 
@@ -243,16 +302,23 @@ class Configuration extends DataFlow::Configuration {
 
 from
   Configuration cfg, DataFlow::PathNode source, DataFlow::PathNode sink, Replacement primary,
-  Replacement supplementary, string message, string metachar
+  Replacement supplementary, string message, string metachar, DataFlow::FlowLabel startlbl,
+  DataFlow::FlowLabel endlbl
 where
   cfg.hasFlowPath(source, sink) and
+  startlbl = source.getPathSummary().getStartLabel() and
+  endlbl = sink.getPathSummary().getEndLabel() and
   (
-    cfg.isSource(supplementary, source.getNode(), _) and
-    cfg.isSink(primary, sink.getNode(), "escaped(" + metachar + ")") and
+    cfg.isSource(supplementary, source.getNode(), startlbl) and
+    cfg.isSink(primary, sink.getNode(), endlbl, "double escaping " + metachar) and
     message = "may double-escape '" + metachar + "' characters from $@"
     or
-    cfg.isSource(primary, source.getNode(), _) and
-    cfg.isSink(supplementary, sink.getNode(), "unescaped(" + metachar + ")") and
+    cfg.isSource(primary, source.getNode(), startlbl) and
+    cfg.isSink(supplementary, sink.getNode(), endlbl, "double unescaping " + metachar) and
     message = "may produce '" + metachar + "' characters that are double-unescaped $@"
+    or
+    cfg.isSource(supplementary, source.getNode(), startlbl) and
+    cfg.isSink(primary, sink.getNode(), endlbl, "nullified escaping " + metachar) and
+    message = "may undo escaping using '" + metachar + "' performed $@"
   )
 select primary, source, sink, "This replacement " + message + ".", supplementary, "here"

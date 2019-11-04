@@ -134,3 +134,8 @@ function testWithCapturedVar(x) {
 function cloneAndStringify(s) {
   return JSON.stringify(JSON.parse(JSON.stringify(s)));
 }
+
+function nullifiedEscape(s) {
+  s = s.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+  return decodeURIComponent(s);
+}
