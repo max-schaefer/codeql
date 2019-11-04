@@ -3,7 +3,7 @@
  * @description When escaping special characters using a meta-character like backslash or
  *              ampersand, the meta-character has to be escaped first to avoid double-escaping,
  *              and conversely it has to be unescaped last to avoid double-unescaping.
- * @kind problem
+ * @kind path-problem
  * @problem.severity warning
  * @precision high
  * @id js/double-escaping
@@ -14,6 +14,7 @@
  */
 
 import javascript
+import DataFlow::PathGraph
 
 /**
  * Holds if `rl` is a simple constant, which is bound to the result of the predicate.
@@ -38,19 +39,6 @@ string getStringValue(RegExpLiteral rl) {
       |
         ch.(RegExpConstant).getValue() order by i
       )
-  )
-}
-
-/**
- * Gets a predecessor of `nd` that is not an SSA phi node.
- */
-DataFlow::Node getASimplePredecessor(DataFlow::Node nd) {
-  result = nd.getAPredecessor() and
-  not exists(SsaDefinition ssa |
-    ssa = nd.(DataFlow::SsaDefinitionNode).getSsaVariable().getDefinition()
-  |
-    ssa instanceof SsaPhiNode or
-    ssa instanceof SsaVariableCapture
   )
 }
 
@@ -103,51 +91,13 @@ abstract class Replacement extends DataFlow::Node {
    * Holds if this replacement unescapes `char` using `metachar`.
    *
    * For example, during HTML entity unescaping `<` is unescaped (from
-   * `&lt;`) using `<`.
+   * `&lt;`) using `&`.
    */
   predicate unescapes(string metachar, string char) {
     exists(string regexp, string orig |
       escapingScheme(metachar, regexp) and
       replaces(orig, char) and
       orig.regexpMatch(regexp)
-    )
-  }
-
-  /**
-   * Gets the previous replacement in this chain of replacements.
-   */
-  Replacement getPreviousReplacement() { result.getOutput() = getASimplePredecessor*(getInput()) }
-
-  /**
-   * Gets the next replacement in this chain of replacements.
-   */
-  Replacement getNextReplacement() { this = result.getPreviousReplacement() }
-
-  /**
-   * Gets an earlier replacement in this chain of replacements that
-   * performs an escaping.
-   */
-  Replacement getAnEarlierEscaping(string metachar) {
-    exists(Replacement pred | pred = this.getPreviousReplacement() |
-      if pred.escapes(_, metachar)
-      then result = pred
-      else (
-        not pred.unescapes(metachar, _) and result = pred.getAnEarlierEscaping(metachar)
-      )
-    )
-  }
-
-  /**
-   * Gets an earlier replacement in this chain of replacements that
-   * performs a unescaping.
-   */
-  Replacement getALaterUnescaping(string metachar) {
-    exists(Replacement succ | this = succ.getPreviousReplacement() |
-      if succ.unescapes(metachar, _)
-      then result = succ
-      else (
-        not succ.escapes(_, metachar) and result = succ.getALaterUnescaping(metachar)
-      )
     )
   }
 }
@@ -217,35 +167,92 @@ class JsonParseReplacement extends Replacement {
   override DataFlow::SourceNode getOutput() { result = self.getOutput() }
 }
 
-/**
- * A string replacement wrapped in a utility function.
- */
-class WrappedReplacement extends Replacement, DataFlow::CallNode {
-  int i;
+class EscapingStatus extends DataFlow::FlowLabel {
+  EscapingStatus() {
+    exists(Replacement replacement, string metachar |
+      replacement.escapes(_, metachar) and
+      this = "escaped(" + metachar + ")"
+      or
+      replacement.unescapes(_, metachar) and
+      this = "unescaped(" + metachar + ")"
+    )
+  }
+}
 
-  Replacement inner;
+class Configuration extends DataFlow::Configuration {
+  Configuration() { this = "DoubleEscaping" }
 
-  WrappedReplacement() {
-    exists(DataFlow::FunctionNode wrapped | wrapped.getFunction() = getACallee() |
-      wrapped.getParameter(i).flowsTo(inner.getPreviousReplacement*().getInput()) and
-      inner.getNextReplacement*().getOutput().flowsTo(wrapped.getAReturn())
+  override predicate isSource(DataFlow::Node nd, DataFlow::FlowLabel lbl) { isSource(_, nd, lbl) }
+
+  predicate isSource(Replacement r, DataFlow::Node nd, DataFlow::FlowLabel lbl) {
+    nd = r.getInput() and
+    lbl = DataFlow::FlowLabel::data()
+  }
+
+  override predicate isAdditionalFlowStep(
+    DataFlow::Node pred, DataFlow::Node succ, DataFlow::FlowLabel inlbl, DataFlow::FlowLabel outlbl
+  ) {
+    exists(Replacement replacement, string metachar |
+      pred = replacement.getInput() and
+      succ = replacement.getOutput()
+    |
+      inlbl = DataFlow::FlowLabel::data() and
+      replacement.escapes(_, metachar) and
+      outlbl = "escaped(" + metachar + ")"
+      or
+      inlbl = "escaped(" + metachar + ")" and
+      not replacement.escapes(metachar, _) and
+      not replacement.unescapes(_, metachar) and
+      outlbl = inlbl
+      or
+      inlbl = "escaped(" + metachar + ")" and
+      replacement.unescapes(_, metachar) and
+      outlbl = DataFlow::FlowLabel::data()
+      or
+      inlbl = DataFlow::FlowLabel::data() and
+      replacement.unescapes(_, metachar) and
+      outlbl = "unescaped(" + metachar + ")"
+      or
+      inlbl = "unescaped(" + metachar + ")" and
+      not replacement.unescapes(metachar, _) and
+      not replacement.escapes(_, metachar) and
+      outlbl = inlbl
+      or
+      inlbl = "unescaped(" + metachar + ")" and
+      replacement.escapes(_, metachar) and
+      outlbl = DataFlow::FlowLabel::data()
     )
   }
 
-  override predicate replaces(string input, string output) { inner.replaces(input, output) }
+  override predicate isSink(DataFlow::Node nd, DataFlow::FlowLabel lbl) { isSink(_, nd, lbl) }
 
-  override DataFlow::Node getInput() { result = getArgument(i) }
+  predicate isSink(Replacement r, DataFlow::Node nd, DataFlow::FlowLabel lbl) {
+    exists(string metachar | nd = r.getInput() |
+      lbl = "escaped(" + metachar + ")" and
+      r.escapes(metachar, _)
+      or
+      lbl = "unescaped(" + metachar + ")" and
+      r.unescapes(metachar, _)
+    )
+  }
 
-  override DataFlow::SourceNode getOutput() { result = this }
+  override predicate isBarrier(DataFlow::Node nd) {
+    exists(SsaVariableCapture ssa | nd = DataFlow::ssaDefinitionNode(ssa))
+  }
 }
 
-from Replacement primary, Replacement supplementary, string message, string metachar
+from
+  Configuration cfg, DataFlow::PathNode source, DataFlow::PathNode sink, Replacement primary,
+  Replacement supplementary, string message, string metachar
 where
-  primary.escapes(metachar, _) and
-  supplementary = primary.getAnEarlierEscaping(metachar) and
-  message = "may double-escape '" + metachar + "' characters from $@"
-  or
-  primary.unescapes(_, metachar) and
-  supplementary = primary.getALaterUnescaping(metachar) and
-  message = "may produce '" + metachar + "' characters that are double-unescaped $@"
-select primary, "This replacement " + message + ".", supplementary, "here"
+  cfg.hasFlowPath(source, sink) and
+  (
+    cfg.isSource(supplementary, source.getNode(), _) and
+    cfg.isSink(primary, sink.getNode(), "escaped(" + metachar + ")") and
+    message = "may double-escape '" + metachar + "' characters from $@"
+    or
+    cfg.isSource(primary, source.getNode(), _) and
+    cfg.isSink(supplementary, sink.getNode(), "unescaped(" + metachar + ")") and
+    message = "may produce '" + metachar + "' characters that are double-unescaped $@"
+  )
+select primary, source, sink, "This replacement " + message + ".", supplementary, "here"

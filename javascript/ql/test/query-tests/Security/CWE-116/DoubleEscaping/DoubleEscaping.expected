@@ -1,12 +1,85 @@
-| tst.js:2:10:4:33 | s.repla ... &amp;") | This replacement may double-escape '&' characters from $@. | tst.js:2:10:3:34 | s.repla ... apos;") | here |
-| tst.js:20:10:20:33 | s.repla ... g, "&") | This replacement may produce '&' characters that are double-unescaped $@. | tst.js:20:10:21:35 | s.repla ... , "\\"") | here |
-| tst.js:30:10:30:33 | s.repla ... g, "&") | This replacement may produce '&' characters that are double-unescaped $@. | tst.js:30:10:32:34 | s.repla ... g, "'") | here |
-| tst.js:47:7:47:30 | s.repla ... g, "&") | This replacement may produce '&' characters that are double-unescaped $@. | tst.js:48:7:48:32 | s.repla ... , "\\"") | here |
-| tst.js:53:10:53:33 | s.repla ... , '\\\\') | This replacement may produce '\\' characters that are double-unescaped $@. | tst.js:53:10:54:33 | s.repla ... , '\\'') | here |
-| tst.js:60:7:60:28 | s.repla ...  '%25') | This replacement may double-escape '%' characters from $@. | tst.js:59:7:59:28 | s.repla ...  '%26') | here |
-| tst.js:68:10:70:38 | s.repla ... &amp;") | This replacement may double-escape '&' characters from $@. | tst.js:68:10:69:39 | s.repla ... apos;") | here |
-| tst.js:74:10:77:10 | JSON.st ...       ) | This replacement may double-escape '\\' characters from $@. | tst.js:75:12:76:37 | s.repla ... u003E") | here |
-| tst.js:86:10:86:22 | JSON.parse(s) | This replacement may produce '\\' characters that are double-unescaped $@. | tst.js:86:10:86:47 | JSON.pa ... g, "<") | here |
-| tst.js:99:10:99:66 | s.repla ... &amp;") | This replacement may double-escape '&' characters from $@. | tst.js:99:10:99:43 | s.repla ... epl[c]) | here |
-| tst.js:107:10:107:53 | encodeD ... &amp;") | This replacement may double-escape '&' characters from $@. | tst.js:107:10:107:30 | encodeD ... otes(s) | here |
-| tst.js:115:10:115:47 | encodeQ ... &amp;") | This replacement may double-escape '&' characters from $@. | tst.js:115:10:115:24 | encodeQuotes(s) | here |
+nodes
+| tst.js:2:10:2:10 | s |
+| tst.js:2:10:2:34 | s.repla ... quot;") |
+| tst.js:2:10:2:34 | s.repla ... quot;") |
+| tst.js:2:10:3:34 | s.repla ... apos;") |
+| tst.js:20:10:20:10 | s |
+| tst.js:20:10:20:33 | s.repla ... g, "&") |
+| tst.js:30:10:30:10 | s |
+| tst.js:30:10:30:33 | s.repla ... g, "&") |
+| tst.js:30:10:31:43 | s.repla ... "else") |
+| tst.js:47:3:47:30 | s |
+| tst.js:47:7:47:7 | s |
+| tst.js:47:7:47:30 | s.repla ... g, "&") |
+| tst.js:48:7:48:7 | s |
+| tst.js:53:10:53:10 | s |
+| tst.js:53:10:53:33 | s.repla ... , '\\\\') |
+| tst.js:59:3:59:28 | s |
+| tst.js:59:7:59:7 | s |
+| tst.js:59:7:59:28 | s.repla ...  '%26') |
+| tst.js:60:7:60:7 | s |
+| tst.js:68:10:68:10 | s |
+| tst.js:68:10:68:39 | s.repla ... quot;") |
+| tst.js:68:10:68:39 | s.repla ... quot;") |
+| tst.js:68:10:69:39 | s.repla ... apos;") |
+| tst.js:75:12:75:12 | s |
+| tst.js:75:12:75:37 | s.repla ... u003C") |
+| tst.js:75:12:75:37 | s.repla ... u003C") |
+| tst.js:75:12:76:37 | s.repla ... u003E") |
+| tst.js:86:10:86:22 | JSON.parse(s) |
+| tst.js:86:21:86:21 | s |
+| tst.js:99:10:99:10 | s |
+| tst.js:99:10:99:43 | s.repla ... epl[c]) |
+| tst.js:103:10:103:10 | s |
+| tst.js:103:10:103:34 | s.repla ... quot;") |
+| tst.js:107:10:107:30 | encodeD ... otes(s) |
+| tst.js:111:10:111:10 | s |
+| tst.js:111:10:111:34 | s.repla ... quot;") |
+| tst.js:111:10:111:34 | s.repla ... quot;") |
+| tst.js:111:10:111:58 | s.repla ... apos;") |
+| tst.js:115:10:115:24 | encodeQuotes(s) |
+edges
+| tst.js:2:10:2:10 | s | tst.js:2:10:2:34 | s.repla ... quot;") |
+| tst.js:2:10:2:34 | s.repla ... quot;") | tst.js:2:10:3:34 | s.repla ... apos;") |
+| tst.js:2:10:2:34 | s.repla ... quot;") | tst.js:2:10:3:34 | s.repla ... apos;") |
+| tst.js:20:10:20:10 | s | tst.js:20:10:20:33 | s.repla ... g, "&") |
+| tst.js:30:10:30:10 | s | tst.js:30:10:30:33 | s.repla ... g, "&") |
+| tst.js:30:10:30:33 | s.repla ... g, "&") | tst.js:30:10:31:43 | s.repla ... "else") |
+| tst.js:47:3:47:30 | s | tst.js:48:7:48:7 | s |
+| tst.js:47:7:47:7 | s | tst.js:47:7:47:30 | s.repla ... g, "&") |
+| tst.js:47:7:47:30 | s.repla ... g, "&") | tst.js:47:3:47:30 | s |
+| tst.js:53:10:53:10 | s | tst.js:53:10:53:33 | s.repla ... , '\\\\') |
+| tst.js:59:3:59:28 | s | tst.js:60:7:60:7 | s |
+| tst.js:59:7:59:7 | s | tst.js:59:7:59:28 | s.repla ...  '%26') |
+| tst.js:59:7:59:28 | s.repla ...  '%26') | tst.js:59:3:59:28 | s |
+| tst.js:68:10:68:10 | s | tst.js:68:10:68:39 | s.repla ... quot;") |
+| tst.js:68:10:68:39 | s.repla ... quot;") | tst.js:68:10:69:39 | s.repla ... apos;") |
+| tst.js:68:10:68:39 | s.repla ... quot;") | tst.js:68:10:69:39 | s.repla ... apos;") |
+| tst.js:75:12:75:12 | s | tst.js:75:12:75:37 | s.repla ... u003C") |
+| tst.js:75:12:75:37 | s.repla ... u003C") | tst.js:75:12:76:37 | s.repla ... u003E") |
+| tst.js:75:12:75:37 | s.repla ... u003C") | tst.js:75:12:76:37 | s.repla ... u003E") |
+| tst.js:86:21:86:21 | s | tst.js:86:10:86:22 | JSON.parse(s) |
+| tst.js:99:10:99:10 | s | tst.js:99:10:99:43 | s.repla ... epl[c]) |
+| tst.js:103:10:103:10 | s | tst.js:103:10:103:34 | s.repla ... quot;") |
+| tst.js:103:10:103:34 | s.repla ... quot;") | tst.js:107:10:107:30 | encodeD ... otes(s) |
+| tst.js:111:10:111:10 | s | tst.js:111:10:111:34 | s.repla ... quot;") |
+| tst.js:111:10:111:34 | s.repla ... quot;") | tst.js:111:10:111:58 | s.repla ... apos;") |
+| tst.js:111:10:111:34 | s.repla ... quot;") | tst.js:111:10:111:58 | s.repla ... apos;") |
+| tst.js:111:10:111:58 | s.repla ... apos;") | tst.js:115:10:115:24 | encodeQuotes(s) |
+#select
+| tst.js:2:10:4:33 | s.repla ... &amp;") | tst.js:2:10:2:10 | s | tst.js:2:10:3:34 | s.repla ... apos;") | This replacement may double-escape '&' characters from $@. | tst.js:2:10:2:34 | s.repla ... quot;") | here |
+| tst.js:2:10:4:33 | s.repla ... &amp;") | tst.js:2:10:2:34 | s.repla ... quot;") | tst.js:2:10:3:34 | s.repla ... apos;") | This replacement may double-escape '&' characters from $@. | tst.js:2:10:3:34 | s.repla ... apos;") | here |
+| tst.js:20:10:20:33 | s.repla ... g, "&") | tst.js:20:10:20:10 | s | tst.js:20:10:20:33 | s.repla ... g, "&") | This replacement may produce '&' characters that are double-unescaped $@. | tst.js:20:10:21:35 | s.repla ... , "\\"") | here |
+| tst.js:30:10:30:33 | s.repla ... g, "&") | tst.js:30:10:30:10 | s | tst.js:30:10:31:43 | s.repla ... "else") | This replacement may produce '&' characters that are double-unescaped $@. | tst.js:30:10:32:34 | s.repla ... g, "'") | here |
+| tst.js:47:7:47:30 | s.repla ... g, "&") | tst.js:47:7:47:7 | s | tst.js:48:7:48:7 | s | This replacement may produce '&' characters that are double-unescaped $@. | tst.js:48:7:48:32 | s.repla ... , "\\"") | here |
+| tst.js:53:10:53:33 | s.repla ... , '\\\\') | tst.js:53:10:53:10 | s | tst.js:53:10:53:33 | s.repla ... , '\\\\') | This replacement may produce '\\' characters that are double-unescaped $@. | tst.js:53:10:54:33 | s.repla ... , '\\'') | here |
+| tst.js:60:7:60:28 | s.repla ...  '%25') | tst.js:59:7:59:7 | s | tst.js:60:7:60:7 | s | This replacement may double-escape '%' characters from $@. | tst.js:59:7:59:28 | s.repla ...  '%26') | here |
+| tst.js:68:10:70:38 | s.repla ... &amp;") | tst.js:68:10:68:10 | s | tst.js:68:10:69:39 | s.repla ... apos;") | This replacement may double-escape '&' characters from $@. | tst.js:68:10:68:39 | s.repla ... quot;") | here |
+| tst.js:68:10:70:38 | s.repla ... &amp;") | tst.js:68:10:68:39 | s.repla ... quot;") | tst.js:68:10:69:39 | s.repla ... apos;") | This replacement may double-escape '&' characters from $@. | tst.js:68:10:69:39 | s.repla ... apos;") | here |
+| tst.js:74:10:77:10 | JSON.st ...       ) | tst.js:75:12:75:12 | s | tst.js:75:12:76:37 | s.repla ... u003E") | This replacement may double-escape '\\' characters from $@. | tst.js:75:12:75:37 | s.repla ... u003C") | here |
+| tst.js:74:10:77:10 | JSON.st ...       ) | tst.js:75:12:75:37 | s.repla ... u003C") | tst.js:75:12:76:37 | s.repla ... u003E") | This replacement may double-escape '\\' characters from $@. | tst.js:75:12:76:37 | s.repla ... u003E") | here |
+| tst.js:86:10:86:22 | JSON.parse(s) | tst.js:86:21:86:21 | s | tst.js:86:10:86:22 | JSON.parse(s) | This replacement may produce '\\' characters that are double-unescaped $@. | tst.js:86:10:86:47 | JSON.pa ... g, "<") | here |
+| tst.js:99:10:99:66 | s.repla ... &amp;") | tst.js:99:10:99:10 | s | tst.js:99:10:99:43 | s.repla ... epl[c]) | This replacement may double-escape '&' characters from $@. | tst.js:99:10:99:43 | s.repla ... epl[c]) | here |
+| tst.js:107:10:107:53 | encodeD ... &amp;") | tst.js:103:10:103:10 | s | tst.js:107:10:107:30 | encodeD ... otes(s) | This replacement may double-escape '&' characters from $@. | tst.js:103:10:103:34 | s.repla ... quot;") | here |
+| tst.js:115:10:115:47 | encodeQ ... &amp;") | tst.js:111:10:111:10 | s | tst.js:115:10:115:24 | encodeQuotes(s) | This replacement may double-escape '&' characters from $@. | tst.js:111:10:111:34 | s.repla ... quot;") | here |
+| tst.js:115:10:115:47 | encodeQ ... &amp;") | tst.js:111:10:111:34 | s.repla ... quot;") | tst.js:115:10:115:24 | encodeQuotes(s) | This replacement may double-escape '&' characters from $@. | tst.js:111:10:111:58 | s.repla ... apos;") | here |
