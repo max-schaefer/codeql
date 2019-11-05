@@ -392,6 +392,17 @@ class ArrayLiteralNode extends DataFlow::ValueNode, DataFlow::SourceNode {
   int getSize() { result = astNode.getSize() }
 }
 
+/** A data-flow node corresponding to a regular-expression literal. */
+class RegExpLiteralNode extends DataFlow::ValueNode, DataFlow::SourceNode {
+  override RegExpLiteral astNode;
+
+  /** Holds if this regular expression has a `g` flag. */
+  predicate isGlobal() { astNode.isGlobal() }
+
+  /** Gets the root term of this regular expression. */
+  RegExpTerm getRoot() { result = astNode.getRoot() }
+}
+
 /** A data flow node corresponding to a `new Array()` or `Array()` invocation. */
 class ArrayConstructorInvokeNode extends DataFlow::InvokeNode {
   ArrayConstructorInvokeNode() { getCalleeNode() = DataFlow::globalVarRef("Array") }
