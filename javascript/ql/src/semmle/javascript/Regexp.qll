@@ -117,6 +117,11 @@ abstract class RegExpTerm extends Locatable, @regexpterm {
    * into account.
    */
   string getConstantValue() { none() }
+
+  /**
+   * Gets a string that is matched by this regular-expression term.
+   */
+  string getAMatchedString() { result = getConstantValue() }
 }
 
 /**
@@ -212,6 +217,8 @@ class RegExpAlt extends RegExpTerm, @regexp_alt {
   int getNumAlternative() { result = getNumChild() }
 
   override predicate isNullable() { getAlternative().isNullable() }
+
+  override string getAMatchedString() { result = getAlternative().getAMatchedString() }
 }
 
 /**
@@ -494,6 +501,8 @@ class RegExpGroup extends RegExpTerm, @regexp_group {
   override predicate isNullable() { getAChild().isNullable() }
 
   override string getConstantValue() { result = getAChild().getConstantValue() }
+
+  override string getAMatchedString() { result = getAChild().getAMatchedString() }
 }
 
 /**
@@ -669,6 +678,10 @@ class RegExpCharacterClass extends RegExpTerm, @regexp_char_class {
   predicate isInverted() { isInverted(this) }
 
   override predicate isNullable() { none() }
+
+  override string getAMatchedString() {
+    not isInverted() and result = getAChild().getAMatchedString()
+  }
 }
 
 /**
