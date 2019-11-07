@@ -1,0 +1,41 @@
+<!DOCTYPE qhelp PUBLIC
+  "-//Semmle//qhelp//EN"
+  "qhelp.dtd">
+<qhelp>
+
+<overview>
+<p>
+Escaping special characters in untrusted input is an important technique for preventing injection
+attacks such as cross-site scripting. One particular example of this is HTML entity encoding,
+where HTML special characters are replaced by HTML character entities to prevent them from being
+interpreted as HTML markup. For example, the less-than character is encoded as <code>&amp;lt;</code>
+and the double-quote character as <code>&amp;quot;</code>.
+Other examples include backslash escaping or JSON encoding for including untrusted data in string
+literals, and percent-encoding for URI components.
+</p>
+<p>
+If a string where special characters have been escaped using one meta-character is later unescaped
+using a different meta-character, this risks reintroducing the special characters that were
+escaped in the first place. For example, if an HTML-encoded string is later URI-decoded, the
+decoding step may reintroduce less-than characters that were escaped by the HTML encoding. This
+may open the door to an injection attack.
+</p>
+</overview>
+
+<recommendation>
+<p>
+Avoid mixing different escaping schemes. If this is impossible, make sure to properly nest
+decoding and encoding steps.
+</p>
+</recommendation>
+
+<example>
+<p>
+TBD
+</p>
+</example>
+
+<references>
+<li>OWASP Top 10: <a href="https://www.owasp.org/index.php/Top_10-2017_A1-Injection">A1 Injection</a>.</li>
+</references>
+</qhelp>
