@@ -176,7 +176,22 @@ string uriEncode(string s) {
 class UriEncoding extends Replacement, DataFlow::CallNode {
   UriEncoding() {
     this = DataFlow::globalVarRef("encodeURI").getACall() or
-    this = DataFlow::globalVarRef("encodeURIComponent").getACall()
+    this = DataFlow::globalVarRef("encodeURIComponent").getACall() or
+    this = DataFlow::moduleMember("url", "pathToFileURL").getACall() or
+    this = DataFlow::moduleMember("urijs", "encode").getACall() or
+    this = DataFlow::moduleMember("urijs", "encodeQuery").getACall() or
+    this = DataFlow::moduleMember("urijs", "encodeReserved").getACall() or
+    this = DataFlow::moduleMember("urijs", "encodePathSegment").getACall() or
+    this = DataFlow::moduleMember("urijs", "encodeUrnPathSegment").getACall() or
+    this = DataFlow::moduleMember("uri-js", "pctEncChar").getACall() or
+    this = DataFlow::moduleMember("uri-js", "escapeComponent").getACall() or
+    this = DataFlow::moduleMember("query-string", "stringify").getACall() or
+    this = DataFlow::moduleMember("querystring", "encode").getACall() or
+    this = DataFlow::moduleMember("querystring", "escape").getACall() or
+    this = DataFlow::moduleMember("querystring", "parse").getACall() or
+    this = DataFlow::moduleMember("querystring", "stringify").getACall() or
+    this = DataFlow::moduleMember("querystringify", "stringify").getACall() or
+    this = DataFlow::moduleImport("strict-uri-encode").getACall()
   }
 
   override predicate replaces(string input, string output) { output = uriEncode(input) }
@@ -192,7 +207,27 @@ class UriEncoding extends Replacement, DataFlow::CallNode {
 class UriDecoding extends Replacement, DataFlow::CallNode {
   UriDecoding() {
     this = DataFlow::globalVarRef("decodeURI").getACall() or
-    this = DataFlow::globalVarRef("decodeURIComponent").getACall()
+    this = DataFlow::globalVarRef("decodeURIComponent").getACall() or
+    this = DataFlow::moduleMember("url", "domainToASCII").getACall() or
+    this = DataFlow::moduleMember("url", "domainToUnicode").getACall() or
+    this = DataFlow::moduleMember("url", "fileURLToPath").getACall() or
+    this = DataFlow::moduleMember("urijs", "decode").getACall() or
+    this = DataFlow::moduleMember("urijs", "decodeQuery").getACall() or
+    this = DataFlow::moduleMember("urijs", "decodePath").getACall() or
+    this = DataFlow::moduleMember("urijs", "decodePathSegment").getACall() or
+    this = DataFlow::moduleMember("urijs", "decodeUrnPath").getACall() or
+    this = DataFlow::moduleMember("urijs", "decodeUrnPathSegment").getACall() or
+    this = DataFlow::moduleMember("urijs", "parseQuery").getACall() or
+    this = DataFlow::moduleMember("uri-js", "normalize").getACall() or
+    this = DataFlow::moduleMember("uri-js", "pctDecChars").getACall() or
+    this = DataFlow::moduleMember("uri-js", "unescapeComponent").getACall() or
+    this = DataFlow::moduleMember("query-string", "parse").getACall() or
+    this = DataFlow::moduleMember("query-string", "parseUrl").getACall() or
+    this = DataFlow::moduleMember("querystring", "unescapeBuffer").getACall() or
+    this = DataFlow::moduleMember("querystring", "unescape").getACall() or
+    this = DataFlow::moduleMember("querystring", "parse").getACall() or
+    this = DataFlow::moduleMember("querystring", "decode").getACall() or
+    this = DataFlow::moduleMember("querystringify", "parse").getACall()
   }
 
   override predicate replaces(string input, string output) { input = uriEncode(output) }
