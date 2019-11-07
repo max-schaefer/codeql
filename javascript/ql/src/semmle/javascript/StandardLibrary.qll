@@ -250,10 +250,16 @@ private class IteratorExceptionStep extends DataFlow::MethodCallNode, DataFlow::
 }
 
 /**
- * A call to a method named `replace` with two arguments, such as `String.prototype.replace`.
+ * A call to `String.prototype.replace`.
+ *
+ * We heuristically include any call to a method called `replace`, provided it either
+ * has exactly two arguments, or local data flow suggests that the receiver may be a string.
  */
-class ReplaceCall extends DataFlow::MethodCallNode {
-  ReplaceCall() { getMethodName() = "replace" and getNumArgument() = 2 }
+class StringReplaceCall extends DataFlow::MethodCallNode {
+  StringReplaceCall() {
+    getMethodName() = "replace" and
+    (getNumArgument() = 2 or getReceiver().mayHaveStringValue(_))
+  }
 
   /** Gets the regular expression passed as the first argument to `replace`, if any. */
   DataFlow::RegExpLiteralNode getRegExp() {

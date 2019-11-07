@@ -44,7 +44,7 @@ predicate isSimple(RegExpTerm t) {
  * Holds if `mce` is of the form `x.replace(re, new)`, where `re` is a global
  * regular expression and `new` prefixes the matched string with a backslash.
  */
-predicate isBackslashEscape(ReplaceCall mce, DataFlow::RegExpLiteralNode re) {
+predicate isBackslashEscape(StringReplaceCall mce, DataFlow::RegExpLiteralNode re) {
   mce.isGlobal() and
   re = mce.getRegExp() and
   (
@@ -90,7 +90,7 @@ predicate allBackslashesEscaped(DataFlow::Node nd) {
 /**
  * Holds if `repl` looks like a call to "String.prototype.replace" that deliberately removes the first occurrence of `str`.
  */
-predicate removesFirstOccurence(ReplaceCall repl, string str) {
+predicate removesFirstOccurence(StringReplaceCall repl, string str) {
   not exists(repl.getRegExp()) and repl.replaces(str, "")
 }
 
@@ -121,16 +121,16 @@ predicate isDelimiterUnwrapper(
  * Holds if `repl` is a standalone use of `String.prototype.replace` to remove a single newline.
  */
 
-predicate removesTrailingNewLine(ReplaceCall repl) {
+predicate removesTrailingNewLine(StringReplaceCall repl) {
   not repl.isGlobal() and
   repl.replaces("\n", "") and
-  not exists(ReplaceCall other |
+  not exists(StringReplaceCall other |
     repl.getAMethodCall() = other or
     other.getAMethodCall() = repl
   )
 }
 
-from ReplaceCall repl, DataFlow::Node old, string msg
+from StringReplaceCall repl, DataFlow::Node old, string msg
 where
   (old = repl.getArgument(0) or old = repl.getRegExp()) and
   (

@@ -129,13 +129,13 @@ abstract class Replacement extends DataFlow::Node {
 /**
  * A call to `String.prototype.replace` that replaces all instances of a pattern.
  */
-class GlobalStringReplacement extends Replacement, ReplaceCall {
+class GlobalStringReplacement extends Replacement, StringReplaceCall {
   GlobalStringReplacement() {
     isGlobal()
   }
 
   override predicate replaces(string input, string output) {
-    ReplaceCall.super.replaces(input, output)
+    StringReplaceCall.super.replaces(input, output)
   }
 
   override DataFlow::Node getInput() { result = this.getReceiver() }
