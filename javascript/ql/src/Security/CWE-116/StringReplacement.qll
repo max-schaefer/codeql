@@ -31,11 +31,14 @@ string getStringValue(RegExpLiteral rl) {
  * into a form described by regular expression `regex`.
  */
 predicate escapingScheme(string metachar, string regex) {
-  metachar = "&" and regex = "&.+;"
-  or
-  metachar = "%" and regex = "%.+"
-  or
-  metachar = "\\" and regex = "\\\\.+"
+  exists(string hexdigits | hexdigits = "[a-fA-F0-9]+" |
+    metachar = "&" and regex = "&(\\w|#\\d+|#[xX]" + hexdigits + ");"
+    or
+    metachar = "%" and regex = "%" + hexdigits
+    or
+    metachar = "\\" and
+    regex = "\\\\(.|\\d+|x" + hexdigits + "|u" + hexdigits + "|u\\{" + hexdigits + "\\})"
+  )
 }
 
 /**
