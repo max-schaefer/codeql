@@ -134,16 +134,23 @@ predicate isDelimiterUnwrapper(
 }
 
 /*
- * Holds if `repl` is a standalone use of `String.prototype.replace` to remove a single newline.
+ * Holds if `repl` is a standalone use of `String.prototype.replace` to remove a single newline,
+ * dollar or percent character.
+ *
+ * This is often done on inputs that are known to only contain a single instance of the character,
+ * such as output from a shell command that is known to end with a single newline, or strings
+ * like "$1.20" or "50%".
  */
 
-predicate removesTrailingNewLine(DataFlow::MethodCallNode repl) {
-  repl.getMethodName() = "replace" and
-  repl.getArgument(0).mayHaveStringValue("\n") and
-  repl.getArgument(1).mayHaveStringValue("") and
-  not exists(DataFlow::MethodCallNode other | other.getMethodName() = "replace" |
-    repl.getAMethodCall() = other or
-    other.getAMethodCall() = repl
+predicate whitelistedRemoval(DataFlow::MethodCallNode repl) {
+  exists(string s | s = "\n" or s = "%" or s = "$" |
+    repl.getMethodName() = "replace" and
+    repl.getArgument(0).mayHaveStringValue(s) and
+    repl.getArgument(1).mayHaveStringValue("") and
+    not exists(DataFlow::MethodCallNode other | other.getMethodName() = "replace" |
+      repl.getAMethodCall() = other or
+      other.getAMethodCall() = repl
+    )
   )
 }
 
@@ -169,11 +176,11 @@ where
     ) and
     // don't flag replace operations in a loop
     not DataFlow::valueNode(repl.getReceiver()) = DataFlow::valueNode(repl).getASuccessor+() and
-    // dont' flag unwrapper
+    // don't flag unwrapper
     not isDelimiterUnwrapper(repl.flow(), _) and
     not isDelimiterUnwrapper(_, repl.flow()) and
-    // dont' flag the removal of trailing newlines
-    not removesTrailingNewLine(repl.flow())
+    // don't flag replacements of certain characters with whitespace
+    not whitelistedRemoval(repl.flow())
     or
     exists(RegExpLiteral rel |
       isBackslashEscape(repl, rel) and
