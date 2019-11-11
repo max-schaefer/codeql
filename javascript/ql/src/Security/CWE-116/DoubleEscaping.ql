@@ -93,11 +93,11 @@ class WrappedReplacement extends Replacement, DataFlow::CallNode {
 
 from Replacement primary, Replacement supplementary, string message, string metachar
 where
-  primary.escapes(metachar, _) and
+  primary.escapes(metachar, metachar) and
   supplementary = getAnEarlierEscaping(primary, metachar) and
   message = "may double-escape '" + metachar + "' characters from $@"
   or
-  primary.unescapes(_, metachar) and
+  primary.unescapes(metachar, metachar) and
   supplementary = getALaterUnescaping(primary, metachar) and
   message = "may produce '" + metachar + "' characters that are double-unescaped $@"
 select primary, "This replacement " + message + ".", supplementary, "here"
