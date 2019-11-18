@@ -1,26 +1,5 @@
 package com.semmle.js.extractor;
 
-import com.semmle.js.extractor.ExtractorConfig.SourceType;
-import com.semmle.js.extractor.FileExtractor.FileType;
-import com.semmle.js.extractor.trapcache.DefaultTrapCache;
-import com.semmle.js.extractor.trapcache.DummyTrapCache;
-import com.semmle.js.extractor.trapcache.ITrapCache;
-import com.semmle.js.parser.ParsedProject;
-import com.semmle.js.parser.TypeScriptParser;
-import com.semmle.ts.extractor.TypeExtractor;
-import com.semmle.ts.extractor.TypeTable;
-import com.semmle.util.data.StringUtil;
-import com.semmle.util.exception.CatastrophicError;
-import com.semmle.util.exception.Exceptions;
-import com.semmle.util.exception.ResourceError;
-import com.semmle.util.exception.UserError;
-import com.semmle.util.extraction.ExtractorOutputConfig;
-import com.semmle.util.files.FileUtil;
-import com.semmle.util.io.csv.CSVReader;
-import com.semmle.util.language.LegacyLanguage;
-import com.semmle.util.process.Env;
-import com.semmle.util.projectstructure.ProjectLayout;
-import com.semmle.util.trap.TrapWriter;
 import java.io.File;
 import java.io.IOException;
 import java.io.Reader;
@@ -47,6 +26,28 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
+
+import com.semmle.js.extractor.FileExtractor.FileType;
+import com.semmle.js.extractor.trapcache.DefaultTrapCache;
+import com.semmle.js.extractor.trapcache.DummyTrapCache;
+import com.semmle.js.extractor.trapcache.ITrapCache;
+import com.semmle.js.parser.ParsedProject;
+import com.semmle.js.parser.TypeScriptParser;
+import com.semmle.ts.extractor.TypeExtractor;
+import com.semmle.ts.extractor.TypeTable;
+import com.semmle.util.data.StringUtil;
+import com.semmle.util.exception.CatastrophicError;
+import com.semmle.util.exception.Exceptions;
+import com.semmle.util.exception.ResourceError;
+import com.semmle.util.exception.UserError;
+import com.semmle.util.extraction.ExtractorOutputConfig;
+import com.semmle.util.files.FileUtil;
+import com.semmle.util.io.csv.CSVReader;
+import com.semmle.util.language.LegacyLanguage;
+import com.semmle.util.process.ArgsParser;
+import com.semmle.util.process.Env;
+import com.semmle.util.projectstructure.ProjectLayout;
+import com.semmle.util.trap.TrapWriter;
 
 /**
  * An alternative entry point to the JavaScript extractor.
@@ -156,15 +157,12 @@ import java.util.stream.Stream;
  *       minified files, it is not usually worth extracting them in the first place.
  * </ul>
  *
- * <p>JavaScript files are normally extracted with {@link SourceType#AUTO}, but an explicit source
- * type can be specified in the environment variable <code>LGTM_INDEX_SOURCE_TYPE</code>.
- *
  * <p>The file type as which a file is extracted can be customised via the <code>
  * LGTM_INDEX_FILETYPES</code> environment variable explained above.
  *
  * <p>If <code>LGTM_INDEX_XML_MODE</code> is set to <code>ALL</code>, then all files with extension
  * <code>.xml</code> under <code>LGTM_SRC</code> are extracted as XML (in addition to any files
- * whose file type is specified to be <code>XML</code> via <code>LGTM_INDEX_SOURCE_TYPE</code>).
+ * whose file type is specified to be <code>XML</code> via <code>LGTM_INDEX_FILETYPES</code>).
  * Currently XML extraction does not respect inclusion and exclusion filters, but this is a bug, not
  * a feature, and hence will change eventually.
  *
@@ -184,12 +182,10 @@ import java.util.stream.Stream;
  */
 public class AutoBuild {
   private static enum Option {
-    LGTM_INDEX_DEFAULT_ENCODING,
     LGTM_INDEX_EXCLUDE,
     LGTM_INDEX_FILETYPES,
     LGTM_INDEX_FILTERS,
     LGTM_INDEX_INCLUDE,
-    LGTM_INDEX_SOURCE_TYPE,
     LGTM_INDEX_TYPESCRIPT,
     LGTM_INDEX_XML_MODE,
     LGTM_REPOSITORY_FOLDERS_CSV,
@@ -215,7 +211,6 @@ public class AutoBuild {
   private ProjectLayout filters;
   private final Path LGTM_SRC, SEMMLE_DIST;
   private final TypeScriptMode typeScriptMode;
-  private final String defaultEncoding;
   private ExecutorService threadPool;
   private volatile boolean seenCode = false;
 
@@ -226,7 +221,6 @@ public class AutoBuild {
     this.trapCache = mkTrapCache();
     this.typeScriptMode =
         getEnumFromEnvVar(Option.LGTM_INDEX_TYPESCRIPT, TypeScriptMode.class, TypeScriptMode.FULL);
-    this.defaultEncoding = getEnvVar(Option.LGTM_INDEX_DEFAULT_ENCODING);
     setupFileTypes();
     setupXmlMode();
     setupMatchers();
@@ -580,9 +574,7 @@ public class AutoBuild {
 
   private ExtractorConfig mkExtractorConfig() {
     ExtractorConfig config = new ExtractorConfig(true);
-    config = config.withSourceType(getSourceType());
     config = config.withTypeScriptMode(typeScriptMode);
-    if (defaultEncoding != null) config = config.withDefaultEncoding(defaultEncoding);
     return config;
   }
 
@@ -736,23 +728,6 @@ public class AutoBuild {
     } finally {
       FileUtil.close(trapWriter);
     }
-  }
-
-  /**
-   * Get the source type specified in <code>LGTM_INDEX_SOURCE_TYPE</code>, or the default of {@link
-   * SourceType#AUTO}.
-   */
-  private SourceType getSourceType() {
-    String sourceTypeName = getEnvVar(Option.LGTM_INDEX_SOURCE_TYPE);
-    if (sourceTypeName != null) {
-      try {
-        return SourceType.valueOf(StringUtil.uc(sourceTypeName));
-      } catch (IllegalArgumentException e) {
-        Exceptions.ignore(e, "We construct a better error message.");
-        throw new UserError(sourceTypeName + " is not a valid source type.");
-      }
-    }
-    return SourceType.AUTO;
   }
 
   /**
