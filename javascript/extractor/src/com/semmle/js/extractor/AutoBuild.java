@@ -195,10 +195,42 @@ public class AutoBuild {
     LGTM_THREADS,
     SEMMLE_DIST;
 
-    public final String envVarName;
+    private final String envVarName;
 
     private Option() {
       this.envVarName = this.name();
+    }
+
+    public String getValue() {
+      return getValue(null);
+    }
+
+    public String getValue(String deflt) {
+      String value = Env.systemEnv().getNonEmpty(envVarName);
+      if (value == null) return deflt;
+      return value;
+    }
+
+    public Path getPathValue() {
+      String lgtmSrc = getValue();
+      if (lgtmSrc == null) throw new UserError(envVarName + " must be set.");
+      Path path = Paths.get(lgtmSrc);
+      return path;
+    }
+
+    public <T extends Enum<T>> T getEnumValue(Class<T> enumClass, T defaultValue) {
+      String envValue = getValue();
+      if (envValue == null) return defaultValue;
+      try {
+        return Enum.valueOf(enumClass, StringUtil.uc(envValue));
+      } catch (IllegalArgumentException ex) {
+        Exceptions.ignore(ex, "We rewrite this to a meaningful user error.");
+        Stream<String> enumNames =
+            Arrays.asList(enumClass.getEnumConstants()).stream()
+                .map(c -> StringUtil.lc(c.toString()));
+        throw new UserError(
+            envVarName + " must be set to one of: " + StringUtil.glue(", ", enumNames.toArray()));
+      }
     }
   }
 
@@ -215,48 +247,15 @@ public class AutoBuild {
   private volatile boolean seenCode = false;
 
   public AutoBuild(ArgsParser ap) {
-    this.LGTM_SRC = toRealPath(getPathFromEnvVar(Option.LGTM_SRC));
-    this.SEMMLE_DIST = getPathFromEnvVar(Option.SEMMLE_DIST);
+    this.LGTM_SRC = toRealPath(Option.LGTM_SRC.getPathValue());
+    this.SEMMLE_DIST = Option.SEMMLE_DIST.getPathValue();
     this.outputConfig = new ExtractorOutputConfig(LegacyLanguage.JAVASCRIPT);
     this.trapCache = mkTrapCache();
     this.typeScriptMode =
-        getEnumFromEnvVar(Option.LGTM_INDEX_TYPESCRIPT, TypeScriptMode.class, TypeScriptMode.FULL);
+        Option.LGTM_INDEX_TYPESCRIPT.getEnumValue(TypeScriptMode.class, TypeScriptMode.FULL);
     setupFileTypes();
     setupXmlMode();
     setupMatchers();
-  }
-
-  private String getEnvVar(Option opt) {
-    return getEnvVar(opt, null);
-  }
-
-  private String getEnvVar(Option opt, String deflt) {
-    String value = Env.systemEnv().getNonEmpty(opt.envVarName);
-    if (value == null) return deflt;
-    return value;
-  }
-
-  private Path getPathFromEnvVar(Option opt) {
-    String lgtmSrc = getEnvVar(opt);
-    if (lgtmSrc == null) throw new UserError(opt.envVarName + " must be set.");
-    Path path = Paths.get(lgtmSrc);
-    return path;
-  }
-
-  private <T extends Enum<T>> T getEnumFromEnvVar(
-      Option opt, Class<T> enumClass, T defaultValue) {
-    String envValue = getEnvVar(opt);
-    if (envValue == null) return defaultValue;
-    try {
-      return Enum.valueOf(enumClass, StringUtil.uc(envValue));
-    } catch (IllegalArgumentException ex) {
-      Exceptions.ignore(ex, "We rewrite this to a meaningful user error.");
-      Stream<String> enumNames =
-          Arrays.asList(enumClass.getEnumConstants()).stream()
-              .map(c -> StringUtil.lc(c.toString()));
-      throw new UserError(
-          opt.envVarName + " must be set to one of: " + StringUtil.glue(", ", enumNames.toArray()));
-    }
   }
 
   /**
@@ -277,10 +276,10 @@ public class AutoBuild {
    */
   private ITrapCache mkTrapCache() {
     ITrapCache trapCache;
-    String trapCachePath = getEnvVar(Option.LGTM_TRAP_CACHE);
+    String trapCachePath = Option.LGTM_TRAP_CACHE.getValue();
     if (trapCachePath != null) {
       Long sizeBound = null;
-      String trapCacheBound = getEnvVar(Option.LGTM_TRAP_CACHE_BOUND);
+      String trapCacheBound = Option.LGTM_TRAP_CACHE_BOUND.getValue();
       if (trapCacheBound != null) {
         sizeBound = DefaultTrapCache.asFileSize(trapCacheBound);
         if (sizeBound == null)
@@ -294,7 +293,7 @@ public class AutoBuild {
   }
 
   private void setupFileTypes() {
-    for (String spec : Main.NEWLINE.split(getEnvVar(Option.LGTM_INDEX_FILETYPES, ""))) {
+    for (String spec : Main.NEWLINE.split(Option.LGTM_INDEX_FILETYPES.getValue(""))) {
       spec = spec.trim();
       if (spec.isEmpty()) continue;
       String[] fields = spec.split(":");
@@ -317,7 +316,7 @@ public class AutoBuild {
   }
 
   private void setupXmlMode() {
-    String xmlMode = getEnvVar(Option.LGTM_INDEX_XML_MODE, "DISABLED");
+    String xmlMode = Option.LGTM_INDEX_XML_MODE.getValue("DISABLED");
     xmlMode = StringUtil.uc(xmlMode.trim());
     if ("ALL".equals(xmlMode)) xmlExtensions.add("xml");
     else if (!"DISABLED".equals(xmlMode))
@@ -337,14 +336,14 @@ public class AutoBuild {
   private void setupIncludesAndExcludes() {
     // process `$LGTM_INDEX_INCLUDE` and `$LGTM_INDEX_EXCLUDE`
     boolean seenInclude = false;
-    for (String pattern : Main.NEWLINE.split(getEnvVar(Option.LGTM_INDEX_INCLUDE, "")))
+    for (String pattern : Main.NEWLINE.split(Option.LGTM_INDEX_INCLUDE.getValue("")))
       seenInclude |= addPathPattern(includes, LGTM_SRC, pattern);
     if (!seenInclude) includes.add(LGTM_SRC);
-    for (String pattern : Main.NEWLINE.split(getEnvVar(Option.LGTM_INDEX_EXCLUDE, "")))
+    for (String pattern : Main.NEWLINE.split(Option.LGTM_INDEX_EXCLUDE.getValue("")))
       addPathPattern(excludes, LGTM_SRC, pattern);
 
     // process `$LGTM_REPOSITORY_FOLDERS_CSV`
-    String lgtmRepositoryFoldersCsv = getEnvVar(Option.LGTM_REPOSITORY_FOLDERS_CSV);
+    String lgtmRepositoryFoldersCsv = Option.LGTM_REPOSITORY_FOLDERS_CSV.getValue();
     if (lgtmRepositoryFoldersCsv != null) {
       Path path = Paths.get(lgtmRepositoryFoldersCsv);
       try (Reader reader = Files.newBufferedReader(path, StandardCharsets.UTF_8);
@@ -410,7 +409,7 @@ public class AutoBuild {
 
     String base = LGTM_SRC.toString().replace('\\', '/');
     // process `$LGTM_INDEX_FILTERS`
-    for (String pattern : Main.NEWLINE.split(getEnvVar(Option.LGTM_INDEX_FILTERS, ""))) {
+    for (String pattern : Main.NEWLINE.split(Option.LGTM_INDEX_FILTERS.getValue(""))) {
       pattern = pattern.trim();
       if (pattern.isEmpty()) continue;
       String[] fields = pattern.split(":");
@@ -463,7 +462,7 @@ public class AutoBuild {
 
   private void startThreadPool() {
     int numThreads = 1;
-    String lgtmThreads = getEnvVar(Option.LGTM_THREADS, "1");
+    String lgtmThreads = Option.LGTM_THREADS.getValue("1");
     try {
       numThreads = Integer.parseInt(lgtmThreads);
     } catch(NumberFormatException nfe) {
