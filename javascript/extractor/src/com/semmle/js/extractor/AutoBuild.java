@@ -196,6 +196,7 @@ public class AutoBuild {
     LGTM_SRC,
     LGTM_TRAP_CACHE,
     LGTM_TRAP_CACHE_BOUND,
+    LGTM_THREADS,
     SEMMLE_DIST;
 
     public final String envVarName;
@@ -467,8 +468,14 @@ public class AutoBuild {
   }
 
   private void startThreadPool() {
-    int defaultNumThreads = 1;
-    int numThreads = Env.systemEnv().getInt("LGTM_THREADS", defaultNumThreads);
+    int numThreads = 1;
+    String lgtmThreads = getEnvVar(Option.LGTM_THREADS, "1");
+    try {
+      numThreads = Integer.parseInt(lgtmThreads);
+    } catch(NumberFormatException nfe) {
+      Exceptions.ignore(nfe, "We just use the default number of threads.");
+    }
+
     if (numThreads > 1) {
       System.out.println("Parallel extraction with " + numThreads + " threads.");
       threadPool = Executors.newFixedThreadPool(numThreads);
