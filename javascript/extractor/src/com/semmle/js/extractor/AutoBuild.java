@@ -232,6 +232,10 @@ public class AutoBuild {
             envVarName + " must be set to one of: " + StringUtil.glue(", ", enumNames.toArray()));
       }
     }
+
+    public String[] getValues() {
+      return Main.NEWLINE.split(getValue(""));
+    }
   }
 
   private final ExtractorOutputConfig outputConfig;
@@ -293,7 +297,7 @@ public class AutoBuild {
   }
 
   private void setupFileTypes() {
-    for (String spec : Main.NEWLINE.split(Option.LGTM_INDEX_FILETYPES.getValue(""))) {
+    for (String spec : Option.LGTM_INDEX_FILETYPES.getValues()) {
       spec = spec.trim();
       if (spec.isEmpty()) continue;
       String[] fields = spec.split(":");
@@ -336,10 +340,10 @@ public class AutoBuild {
   private void setupIncludesAndExcludes() {
     // process `$LGTM_INDEX_INCLUDE` and `$LGTM_INDEX_EXCLUDE`
     boolean seenInclude = false;
-    for (String pattern : Main.NEWLINE.split(Option.LGTM_INDEX_INCLUDE.getValue("")))
+    for (String pattern : Option.LGTM_INDEX_INCLUDE.getValues())
       seenInclude |= addPathPattern(includes, LGTM_SRC, pattern);
     if (!seenInclude) includes.add(LGTM_SRC);
-    for (String pattern : Main.NEWLINE.split(Option.LGTM_INDEX_EXCLUDE.getValue("")))
+    for (String pattern : Option.LGTM_INDEX_EXCLUDE.getValues())
       addPathPattern(excludes, LGTM_SRC, pattern);
 
     // process `$LGTM_REPOSITORY_FOLDERS_CSV`
@@ -409,7 +413,7 @@ public class AutoBuild {
 
     String base = LGTM_SRC.toString().replace('\\', '/');
     // process `$LGTM_INDEX_FILTERS`
-    for (String pattern : Main.NEWLINE.split(Option.LGTM_INDEX_FILTERS.getValue(""))) {
+    for (String pattern : Option.LGTM_INDEX_FILTERS.getValues()) {
       pattern = pattern.trim();
       if (pattern.isEmpty()) continue;
       String[] fields = pattern.split(":");
