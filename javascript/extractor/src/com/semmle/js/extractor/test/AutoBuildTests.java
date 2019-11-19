@@ -105,7 +105,7 @@ public class AutoBuildTests {
     Env.systemEnv().pushEnvironmentContext(envVars);
     try {
       Set<String> actual = new LinkedHashSet<>();
-      new AutoBuild() {
+      new AutoBuild(null) {
         @Override
         protected void extract(FileExtractor extractor, Path file, ExtractorState state) {
           String extracted = file.toString();
@@ -143,7 +143,7 @@ public class AutoBuildTests {
                 }
               });
         }
-      }.run();
+      }.run(null);
       String expectedString = StringUtil.glue("\n", expected.stream().sorted().toArray());
       String actualString = StringUtil.glue("\n", actual.stream().sorted().toArray());
       Assert.assertEquals(expectedString, actualString);

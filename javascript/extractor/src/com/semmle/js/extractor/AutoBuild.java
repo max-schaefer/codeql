@@ -182,44 +182,73 @@ import com.semmle.util.trap.TrapWriter;
  */
 public class AutoBuild {
   private static enum Option {
-    LGTM_INDEX_EXCLUDE,
-    LGTM_INDEX_FILETYPES,
-    LGTM_INDEX_FILTERS,
-    LGTM_INDEX_INCLUDE,
-    LGTM_INDEX_TYPESCRIPT,
-    LGTM_INDEX_XML_MODE,
-    LGTM_REPOSITORY_FOLDERS_CSV,
-    LGTM_SRC,
-    LGTM_TRAP_CACHE,
-    LGTM_TRAP_CACHE_BOUND,
-    LGTM_THREADS,
-    SEMMLE_DIST;
+    LGTM_INDEX_EXCLUDE("--exclude", "A path to exclude from extraction.", 1, true),
+    LGTM_INDEX_FILETYPES("--file-type", "A pair .extension:type associating a file extension with its file type.", 1, true),
+    LGTM_INDEX_FILTERS("--filter", "A filter to apply before deciding whether to extract a file.", 1, true),
+    LGTM_INDEX_INCLUDE("--include", "A path to include for extraction.", 1, true),
+    LGTM_INDEX_TYPESCRIPT("--typescript", "How to extract TypeScript files.", 1),
+    LGTM_INDEX_XML_MODE("--xml-indexing-mode", "How to extract XML files.", 1),
+    LGTM_REPOSITORY_FOLDERS_CSV("A file containing paths to exclude from extraction."),
+    LGTM_SRC("--root", "The path from which extraction starts.", 1) {
+      @Override public String getValue(ArgsParser ap) {
+        return super.getValue(ap, ".");
+      }
+    },
+    LGTM_TRAP_CACHE("--trap-cache", "A folder to use for caching trap files.", 1),
+    LGTM_TRAP_CACHE_BOUND("--trap-cache-bound", "A (soft) upper bound on the size of the trap cache.", 1),
+    LGTM_THREADS("--threads", "The number of extractions to perform in parallel.", 1),
+    SEMMLE_DIST("The root of an ODASA or CodeQL distribution");
 
     private final String envVarName;
+    private final String optionName;
+    private final String description;
+    private final int argCount;
+    private final boolean repeatable;
 
-    private Option() {
+    private Option(String optionName, String description, int argCount, boolean repeatable) {
       this.envVarName = this.name();
+      this.optionName = optionName;
+      this.description = description;
+      this.argCount = argCount;
+      this.repeatable = repeatable;
     }
 
-    public String getValue() {
-      return getValue(null);
+    private Option(String optionName, String description, int argCount) {
+      this(optionName, description, argCount, false);
     }
 
-    public String getValue(String deflt) {
+    private Option(String description) {
+      this(null, description, 0, false);
+    }
+
+    public void register(ArgsParser ap) {
+      if (optionName != null)
+        ap.addFlag(optionName, argCount, description, repeatable);
+    }
+
+    public String getValue(ArgsParser ap) {
+      return getValue(ap, null);
+    }
+
+    public String getValue(ArgsParser ap, String deflt) {
       String value = Env.systemEnv().getNonEmpty(envVarName);
-      if (value == null) return deflt;
-      return value;
+      if (value != null) return value;
+
+      if (this.optionName != null && ap != null && ap.has(this.optionName))
+        return ap.getString(this.optionName);
+
+      return deflt;
     }
 
-    public Path getPathValue() {
-      String lgtmSrc = getValue();
+    public Path getPathValue(ArgsParser ap) {
+      String lgtmSrc = getValue(ap);
       if (lgtmSrc == null) throw new UserError(envVarName + " must be set.");
       Path path = Paths.get(lgtmSrc);
       return path;
     }
 
-    public <T extends Enum<T>> T getEnumValue(Class<T> enumClass, T defaultValue) {
-      String envValue = getValue();
+    public <T extends Enum<T>> T getEnumValue(ArgsParser ap, Class<T> enumClass, T defaultValue) {
+      String envValue = getValue(ap);
       if (envValue == null) return defaultValue;
       try {
         return Enum.valueOf(enumClass, StringUtil.uc(envValue));
@@ -233,8 +262,11 @@ public class AutoBuild {
       }
     }
 
-    public String[] getValues() {
-      return Main.NEWLINE.split(getValue(""));
+    public List<String> getValues(ArgsParser ap) {
+      String values = getValue(null, "");
+      if (values.isEmpty() && this.optionName != null && ap != null)
+        return ap.getZeroOrMore(this.optionName);
+      return Arrays.asList(Main.NEWLINE.split(values));
     }
   }
 
@@ -251,15 +283,15 @@ public class AutoBuild {
   private volatile boolean seenCode = false;
 
   public AutoBuild(ArgsParser ap) {
-    this.LGTM_SRC = toRealPath(Option.LGTM_SRC.getPathValue());
-    this.SEMMLE_DIST = Option.SEMMLE_DIST.getPathValue();
+    this.LGTM_SRC = toRealPath(Option.LGTM_SRC.getPathValue(ap));
+    this.SEMMLE_DIST = Option.SEMMLE_DIST.getPathValue(ap);
     this.outputConfig = new ExtractorOutputConfig(LegacyLanguage.JAVASCRIPT);
-    this.trapCache = mkTrapCache();
+    this.trapCache = mkTrapCache(ap);
     this.typeScriptMode =
-        Option.LGTM_INDEX_TYPESCRIPT.getEnumValue(TypeScriptMode.class, TypeScriptMode.FULL);
-    setupFileTypes();
-    setupXmlMode();
-    setupMatchers();
+        Option.LGTM_INDEX_TYPESCRIPT.getEnumValue(ap, TypeScriptMode.class, TypeScriptMode.FULL);
+    setupFileTypes(ap);
+    setupXmlMode(ap);
+    setupMatchers(ap);
   }
 
   /**
@@ -278,12 +310,12 @@ public class AutoBuild {
    * Set up TRAP cache based on environment variables <code>LGTM_TRAP_CACHE</code> and <code>
    * LGTM_TRAP_CACHE_BOUND</code>.
    */
-  private ITrapCache mkTrapCache() {
+  private ITrapCache mkTrapCache(ArgsParser ap) {
     ITrapCache trapCache;
-    String trapCachePath = Option.LGTM_TRAP_CACHE.getValue();
+    String trapCachePath = Option.LGTM_TRAP_CACHE.getValue(ap);
     if (trapCachePath != null) {
       Long sizeBound = null;
-      String trapCacheBound = Option.LGTM_TRAP_CACHE_BOUND.getValue();
+      String trapCacheBound = Option.LGTM_TRAP_CACHE_BOUND.getValue(ap);
       if (trapCacheBound != null) {
         sizeBound = DefaultTrapCache.asFileSize(trapCacheBound);
         if (sizeBound == null)
@@ -296,8 +328,8 @@ public class AutoBuild {
     return trapCache;
   }
 
-  private void setupFileTypes() {
-    for (String spec : Option.LGTM_INDEX_FILETYPES.getValues()) {
+  private void setupFileTypes(ArgsParser ap) {
+    for (String spec : Option.LGTM_INDEX_FILETYPES.getValues(ap)) {
       spec = spec.trim();
       if (spec.isEmpty()) continue;
       String[] fields = spec.split(":");
@@ -319,8 +351,8 @@ public class AutoBuild {
     }
   }
 
-  private void setupXmlMode() {
-    String xmlMode = Option.LGTM_INDEX_XML_MODE.getValue("DISABLED");
+  private void setupXmlMode(ArgsParser ap) {
+    String xmlMode = Option.LGTM_INDEX_XML_MODE.getValue(ap, "DISABLED");
     xmlMode = StringUtil.uc(xmlMode.trim());
     if ("ALL".equals(xmlMode)) xmlExtensions.add("xml");
     else if (!"DISABLED".equals(xmlMode))
@@ -328,26 +360,26 @@ public class AutoBuild {
   }
 
   /** Set up include and exclude matchers based on environment variables. */
-  private void setupMatchers() {
-    setupIncludesAndExcludes();
-    setupFilters();
+  private void setupMatchers(ArgsParser ap) {
+    setupIncludesAndExcludes(ap);
+    setupFilters(ap);
   }
 
   /**
    * Set up include matchers based on <code>LGTM_INDEX_INCLUDE</code> and <code>
    * LGTM_INDEX_TYPESCRIPT</code>.
    */
-  private void setupIncludesAndExcludes() {
+  private void setupIncludesAndExcludes(ArgsParser ap) {
     // process `$LGTM_INDEX_INCLUDE` and `$LGTM_INDEX_EXCLUDE`
     boolean seenInclude = false;
-    for (String pattern : Option.LGTM_INDEX_INCLUDE.getValues())
+    for (String pattern : Option.LGTM_INDEX_INCLUDE.getValues(ap))
       seenInclude |= addPathPattern(includes, LGTM_SRC, pattern);
     if (!seenInclude) includes.add(LGTM_SRC);
-    for (String pattern : Option.LGTM_INDEX_EXCLUDE.getValues())
+    for (String pattern : Option.LGTM_INDEX_EXCLUDE.getValues(ap))
       addPathPattern(excludes, LGTM_SRC, pattern);
 
     // process `$LGTM_REPOSITORY_FOLDERS_CSV`
-    String lgtmRepositoryFoldersCsv = Option.LGTM_REPOSITORY_FOLDERS_CSV.getValue();
+    String lgtmRepositoryFoldersCsv = Option.LGTM_REPOSITORY_FOLDERS_CSV.getValue(ap);
     if (lgtmRepositoryFoldersCsv != null) {
       Path path = Paths.get(lgtmRepositoryFoldersCsv);
       try (Reader reader = Files.newBufferedReader(path, StandardCharsets.UTF_8);
@@ -380,7 +412,7 @@ public class AutoBuild {
     }
   }
 
-  private void setupFilters() {
+  private void setupFilters(ArgsParser ap) {
     List<String> patterns = new ArrayList<String>();
     patterns.add("/");
 
@@ -413,7 +445,7 @@ public class AutoBuild {
 
     String base = LGTM_SRC.toString().replace('\\', '/');
     // process `$LGTM_INDEX_FILTERS`
-    for (String pattern : Option.LGTM_INDEX_FILTERS.getValues()) {
+    for (String pattern : Option.LGTM_INDEX_FILTERS.getValues(ap)) {
       pattern = pattern.trim();
       if (pattern.isEmpty()) continue;
       String[] fields = pattern.split(":");
@@ -448,8 +480,8 @@ public class AutoBuild {
   }
 
   /** Perform extraction. */
-  public int run() throws IOException {
-    startThreadPool();
+  public int run(ArgsParser ap) throws IOException {
+    startThreadPool(ap);
     try {
       extractSource();
       extractExterns();
@@ -464,9 +496,9 @@ public class AutoBuild {
     return 0;
   }
 
-  private void startThreadPool() {
+  private void startThreadPool(ArgsParser ap) {
     int numThreads = 1;
-    String lgtmThreads = Option.LGTM_THREADS.getValue("1");
+    String lgtmThreads = Option.LGTM_THREADS.getValue(ap, "1");
     try {
       numThreads = Integer.parseInt(lgtmThreads);
     } catch(NumberFormatException nfe) {
@@ -805,7 +837,11 @@ public class AutoBuild {
 
   public static void main(String[] args) {
     try {
-      System.exit(new AutoBuild().run());
+      ArgsParser ap = new ArgsParser(args);
+      for (Option opt : Option.values())
+        opt.register(ap);
+      ap.parse();
+      System.exit(new AutoBuild(ap).run(ap));
     } catch (IOException | UserError | CatastrophicError e) {
       System.err.println(e.toString());
       System.exit(1);
