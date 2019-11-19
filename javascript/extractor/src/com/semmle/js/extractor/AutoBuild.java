@@ -63,6 +63,7 @@ import com.semmle.util.trap.TrapWriter;
  * (explained in more detail below; see also {@link Option}):
  *
  * <ul>
+ *   <li><code>LGTM_INDEX_ABORT_ON_PARSE_ERRORS</code>: whether to abort extraction as soon as a parse error is encountered
  *   <li><code>LGTM_INDEX_INCLUDE</code>: a newline-separated list of paths to include
  *   <li><code>LGTM_INDEX_EXCLUDE</code>: a newline-separated list of paths to exclude
  *   <li><code>LGTM_REPOSITORY_FOLDERS_CSV</code>: the path of a CSV file containing file
@@ -173,6 +174,9 @@ import com.semmle.util.trap.TrapWriter;
  * following environment variables are available:
  *
  * <ul>
+ *   <li><code>LGTM_INDEX_ABORT_ON_PARSE_ERRORS</code>, if set to <code>true</code>, causes extraction
+ *       to abort with an error as soon as a parse error is encountered. Default behaviour is to
+ *       continue extraction.
  *   <li><code>LGTM_THREADS</code> determines how many threads are used for parallel extraction of
  *       JavaScript files (TypeScript files cannot currently be extracted in parallel). If left
  *       unspecified, the extractor uses a single thread.
@@ -182,6 +186,7 @@ import com.semmle.util.trap.TrapWriter;
  */
 public class AutoBuild {
   private static enum Option {
+    LGTM_INDEX_ABORT_ON_PARSE_ERRORS("--abort-on-parse-errors", "Abort extraction if a parse error is encountered.", 0),
     LGTM_INDEX_EXCLUDE("--exclude", "A path to exclude from extraction.", 1, true),
     LGTM_INDEX_FILETYPES("--file-type", "A pair .extension:type associating a file extension with its file type.", 1, true),
     LGTM_INDEX_FILTERS("--filter", "A filter to apply before deciding whether to extract a file.", 1, true),
@@ -268,6 +273,12 @@ public class AutoBuild {
         return ap.getZeroOrMore(this.optionName);
       return Arrays.asList(Main.NEWLINE.split(values));
     }
+
+    public boolean isSet(ArgsParser ap) {
+      if (ap != null && ap.has(optionName))
+        return true;
+      return "true".equals(getValue(ap, "").trim());
+    }
   }
 
   private final ExtractorOutputConfig outputConfig;
@@ -279,6 +290,7 @@ public class AutoBuild {
   private ProjectLayout filters;
   private final Path LGTM_SRC, SEMMLE_DIST;
   private final TypeScriptMode typeScriptMode;
+  private final boolean abortOnParseErrors;
   private ExecutorService threadPool;
   private volatile boolean seenCode = false;
 
@@ -289,6 +301,7 @@ public class AutoBuild {
     this.trapCache = mkTrapCache(ap);
     this.typeScriptMode =
         Option.LGTM_INDEX_TYPESCRIPT.getEnumValue(ap, TypeScriptMode.class, TypeScriptMode.FULL);
+    this.abortOnParseErrors = Option.LGTM_INDEX_ABORT_ON_PARSE_ERRORS.isSet(ap);
     setupFileTypes(ap);
     setupXmlMode(ap);
     setupMatchers(ap);
@@ -610,6 +623,7 @@ public class AutoBuild {
   private ExtractorConfig mkExtractorConfig() {
     ExtractorConfig config = new ExtractorConfig(true);
     config = config.withTypeScriptMode(typeScriptMode);
+    config = config.withTolerateParseErrors(!abortOnParseErrors);
     return config;
   }
 
