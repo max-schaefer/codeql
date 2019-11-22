@@ -17,8 +17,6 @@ import javascript
  * </pre>
  */
 class JSDoc extends @jsdoc, Locatable {
-  override Location getLocation() { hasLocation(this, result) }
-
   /** Gets the description text of this JSDoc comment. */
   string getDescription() { jsdoc(this, result, _) }
 
@@ -72,8 +70,6 @@ abstract class Documentable extends ASTNode {
  * ```
  */
 class JSDocTypeExprParent extends @jsdoc_type_expr_parent, Locatable {
-  override Location getLocation() { hasLocation(this, result) }
-
   JSDoc getJSDocComment() { none() }
 }
 

@@ -88,10 +88,7 @@ class Locatable extends @locatable {
   File getFile() { result = getLocation().getFile() }
 
   /** Gets this element's location. */
-  Location getLocation() {
-    // overridden by subclasses
-    none()
-  }
+  Location getLocation() { hasLocation(this, result) }
 
   /**
    * Gets the line on which this element starts.
