@@ -70,6 +70,7 @@ abstract class Documentable extends ASTNode {
  * ```
  */
 class JSDocTypeExprParent extends @jsdoc_type_expr_parent, Locatable {
+  /** Gets the JSDoc comment to which this element belongs. */
   JSDoc getJSDocComment() { none() }
 }
 
