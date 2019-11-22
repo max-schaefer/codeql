@@ -287,15 +287,24 @@ module RangeAnalysis {
   }
 
   /**
+   * Gets a comment containing `NaN` or `NAN` in `file`, where `start` and `end` are the start and
+   * end lines of the comment, respectively.
+   */
+  pragma[noinline]
+  private Comment getNaNIndicatorComment(string file, int start, int end) {
+    result.getText().regexpMatch("(?s).*N[aA]N.*") and
+    result.getLocation().hasLocationInfo(file, start, _, end, _)
+  }
+
+  /**
    * Holds if the given container has a comment or identifier mentioning `NaN`.
    */
   predicate hasNaNIndicator(StmtContainer container) {
-    exists(Comment comment |
-      comment.getText().regexpMatch("(?s).*N[aA]N.*") and
-      comment.getFile() = container.getFile() and
+    exists(Comment comment, string f, int comsl, int comel, int contsl, int contel |
+      comment = getNaNIndicatorComment(f, comsl, comel) and
+      container.getLocation().hasLocationInfo(f, contsl, _, contel, _) and
       (
-        comment.getLocation().getStartLine() >= container.getLocation().getStartLine() and
-        comment.getLocation().getEndLine() <= container.getLocation().getEndLine()
+        comsl >= contsl and comel <= contel
         or
         comment.getNextToken() = container.getFirstToken()
       )
