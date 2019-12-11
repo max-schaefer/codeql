@@ -476,7 +476,7 @@ module TaintTracking {
             name = "trimLeft" or
             name = "trimRight" or
             // sorted, interesting, properties of Object.prototype
-            name = "toString" or
+            name = "toString" and astNode.(MethodCallExpr).getNumArgument() = 0 or
             name = "valueOf" or
             // sorted, interesting, properties of Array.prototype
             name = "join"
