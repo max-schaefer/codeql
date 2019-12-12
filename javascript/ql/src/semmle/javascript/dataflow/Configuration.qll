@@ -1035,6 +1035,12 @@ class PathNode extends TPathNode {
     result = getASuccessor(this)
   }
 
+  /**
+   * Holds if the path from source to this node is balanced, that is, it has the same number of
+   * calls and returns.
+   */
+  predicate isBalanced() { none() }
+
   /** Gets a textual representation of this path node. */
   string toString() { result = nd.toString() }
 
@@ -1129,6 +1135,11 @@ class MidPathNode extends PathNode, MkMidNode {
     // Skip the exceptional return on functions, as this highlights the entire function.
     nd = any(DataFlow::FunctionNode f).getExceptionalReturn()
   }
+
+  override predicate isBalanced() {
+    summary.hasCall() = false and
+    summary.hasReturn() = false
+  }
 }
 
 /**
@@ -1136,6 +1147,8 @@ class MidPathNode extends PathNode, MkMidNode {
  */
 class SourcePathNode extends PathNode, MkSourceNode {
   SourcePathNode() { this = MkSourceNode(nd, cfg) }
+
+  override predicate isBalanced() { any() }
 }
 
 /**
@@ -1143,6 +1156,8 @@ class SourcePathNode extends PathNode, MkSourceNode {
  */
 class SinkPathNode extends PathNode, MkSinkNode {
   SinkPathNode() { this = MkSinkNode(nd, cfg) }
+
+  override predicate isBalanced() { finalMidNode(this).isBalanced() }
 }
 
 /**
