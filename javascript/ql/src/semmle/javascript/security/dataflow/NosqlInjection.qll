@@ -19,10 +19,8 @@ module NosqlInjection {
   class Configuration extends TaintTracking::Configuration {
     Configuration() { this = "NosqlInjection" }
 
-    override predicate isSource(DataFlow::Node source) { source instanceof Source }
-
     override predicate isSource(DataFlow::Node source, DataFlow::FlowLabel label) {
-      TaintedObject::isSource(source, label)
+      source.(Source).getAFlowLabel() = label
     }
 
     override predicate isSink(DataFlow::Node sink, DataFlow::FlowLabel label) {
@@ -41,16 +39,7 @@ module NosqlInjection {
     override predicate isAdditionalFlowStep(
       DataFlow::Node src, DataFlow::Node trg, DataFlow::FlowLabel inlbl, DataFlow::FlowLabel outlbl
     ) {
-      TaintedObject::step(src, trg, inlbl, outlbl)
-      or
-      // additional flow step to track taint through NoSQL query objects
-      inlbl = TaintedObject::label() and
-      outlbl = TaintedObject::label() and
-      exists(NoSQL::Query query, DataFlow::SourceNode queryObj |
-        queryObj.flowsToExpr(query) and
-        queryObj.flowsTo(trg) and
-        src = queryObj.getAPropertyWrite().getRhs()
-      )
+      any(AdditionalFlowStep afs).step(src, trg, inlbl, outlbl)
     }
   }
 }
