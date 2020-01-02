@@ -649,7 +649,7 @@ public class AutoBuild {
         for (File sourceFile : project.getSourceFiles()) {
           Path sourcePath = sourceFile.toPath();
           if (!files.contains(normalizePath(sourcePath))) continue;
-          if (!FileType.TYPESCRIPT.getExtensions().contains(FileUtil.extension(sourcePath))) {
+          if (getFileType(sourcePath) != FileType.TYPESCRIPT) {
             // For the time being, skip non-TypeScript files, even if the TypeScript
             // compiler can parse them for us.
             continue;
@@ -672,7 +672,7 @@ public class AutoBuild {
       List<File> remainingTypeScriptFiles = new ArrayList<File>();
       for (Path f : files) {
         if (!extractedFiles.contains(f)
-            && FileType.forFileExtension(f.toFile()) == FileType.TYPESCRIPT) {
+            && getFileType(f) == FileType.TYPESCRIPT) {
           remainingTypeScriptFiles.add(f.toFile());
         }
       }
@@ -692,9 +692,20 @@ public class AutoBuild {
       // Check if there are any files with the TypeScript extension.
       // Do not use FileType.forFile as it involves I/O for file header checks,
       // and files with a bad header have already been excluded.
-      if (FileType.forFileExtension(file.toFile()) == FileType.TYPESCRIPT) return true;
+      if (getFileType(file) == FileType.TYPESCRIPT) return true;
     }
     return false;
+  }
+
+  /**
+   * Get the file type for a given file, taking user-specified file-type overrides
+   * into account.
+   */
+  private FileType getFileType(Path file) {
+    FileType ft = fileTypes.get(StringUtil.lc(FileUtil.extension(file)));
+    if (ft != null)
+      return ft;
+    return FileType.forFileExtension(file.toFile());
   }
 
   private void findFilesToExtract(
