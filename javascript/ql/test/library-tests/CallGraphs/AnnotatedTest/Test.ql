@@ -9,8 +9,8 @@ import semmle.javascript.dataflow.internal.FlowSteps as FlowSteps
  */
 string getAnnotation(Documentable doc, string tag) {
   exists(string text |
-    text = doc.getDocumentation().getComment().getText().regexpFind("[\\w]+:[\\w\\d.]+", _, _) and
-    tag = text.regexpCapture("([\\w]+):.*", 1) and
+    text = doc.getDocumentation().getComment().getText().regexpFind("[\\w\\d]+:[\\w\\d.]+", _, _) and
+    tag = text.regexpCapture("([\\w\\d]+):.*", 1) and
     result = text.regexpCapture(".*:([\\w\\d.]+)", 1)
   )
 }
