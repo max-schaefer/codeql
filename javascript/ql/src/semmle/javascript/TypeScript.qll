@@ -216,11 +216,15 @@ class ExternalModuleReference extends Expr, Import, @externalmodulereference {
   override DataFlow::Node getImportedModuleNode() { result = DataFlow::valueNode(this) }
 }
 
+private predicate isPartOfExternalModuleReference(Expr e) {
+  e = any(ExternalModuleReference emr).getExpression()
+  or
+  isPartOfExternalModuleReference(e.getParentExpr())
+}
+
 /** A literal path expression appearing in an external module reference. */
 private class LiteralExternalModulePath extends PathExprInModule, ConstantString {
-  LiteralExternalModulePath() {
-    exists(ExternalModuleReference emr | this.getParentExpr*() = emr.getExpression())
-  }
+  LiteralExternalModulePath() { isPartOfExternalModuleReference(this) }
 
   override string getValue() { result = getStringValue() }
 }

@@ -2617,11 +2617,15 @@ class DynamicImportExpr extends @dynamicimport, Expr, Import {
   override DataFlow::Node getImportedModuleNode() { result = DataFlow::valueNode(this) }
 }
 
+private predicate isPartOfDynamicImportSource(Expr e) {
+  e = any(DynamicImportExpr di).getSource()
+  or
+  isPartOfDynamicImportSource(e.getParentExpr())
+}
+
 /** A literal path expression appearing in a dynamic import. */
 private class LiteralDynamicImportPath extends PathExprInModule, ConstantString {
-  LiteralDynamicImportPath() {
-    exists(DynamicImportExpr di | this.getParentExpr*() = di.getSource())
-  }
+  LiteralDynamicImportPath() { isPartOfDynamicImportSource(this) }
 
   override string getValue() { result = getStringValue() }
 }

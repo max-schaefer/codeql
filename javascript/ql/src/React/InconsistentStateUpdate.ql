@@ -32,12 +32,13 @@ DataFlow::PropRead getAnOutermostUnsafeAccess(ReactComponent c) {
 }
 
 /**
- * Gets a property write through `setState` for state property `name` of `c`.
+ * Gets a property write through `setState` for state property `name` of `c` in container `sc`.
  */
-DataFlow::PropWrite getAStateUpdate(ReactComponent c, string name) {
+DataFlow::PropWrite getAStateUpdate(ReactComponent c, string name, StmtContainer sc) {
   exists(DataFlow::ObjectLiteralNode newState |
     newState.flowsTo(c.getAMethodCall("setState").getArgument(0)) and
-    result = newState.getAPropertyWrite(name)
+    result = newState.getAPropertyWrite(name) and
+    sc = result.getContainer()
   )
 }
 
@@ -46,30 +47,72 @@ DataFlow::PropWrite getAStateUpdate(ReactComponent c, string name) {
  */
 DataFlow::PropWrite getAUniqueStateUpdate(ReactComponent c) {
   exists(string name |
-    count(getAStateUpdate(c, name)) = 1 and
-    result = getAStateUpdate(c, name)
+    count(getAStateUpdate(c, name, _)) = 1 and
+    result = getAStateUpdate(c, name, _)
   )
+}
+
+/**
+ * Gets a property read of state property `name` of `c` in container `sc`.
+ */
+DataFlow::PropRead getAStateRead(ReactComponent c, string name, StmtContainer sc) {
+  c.getADirectStateAccess().flowsTo(result.getBase()) and
+  result.getPropertyName() = name and
+  sc = result.getContainer()
+}
+
+/**
+ * Holds if `e` is syntactically nested inside the right-hand side of property write `pwn`.
+ */
+predicate inStateUpdateRhs(DataFlow::PropWrite pwn, Expr e) {
+  pwn = getAStateUpdate(_, _, _) and
+  e = pwn.getRhs().asExpr()
+  or
+  inStateUpdateRhs(pwn, e.getParentExpr())
 }
 
 /**
  * Holds for "self dependent" component state updates. E.g. `this.setState({toggled: !this.state.toggled})`.
  */
 predicate isAStateUpdateFromSelf(ReactComponent c, DataFlow::PropWrite pwn, DataFlow::PropRead prn) {
-  exists(string name |
-    pwn = getAStateUpdate(c, name) and
-    c.getADirectStateAccess().flowsTo(prn.getBase()) and
-    prn.getPropertyName() = name and
-    pwn.getRhs().asExpr() = prn.asExpr().getParentExpr*() and
-    pwn.getContainer() = prn.getContainer()
+  exists(string name, StmtContainer sc |
+    pwn = getAStateUpdate(c, name, sc) and
+    prn = getAStateRead(c, name, sc) and
+    inStateUpdateRhs(pwn, prn.asExpr())
   )
 }
 
-from ReactComponent c, MethodCallExpr setState, Expr getState
-where
-  setState = c.getAMethodCall("setState").asExpr() and
+/**
+ * Holds if `getState` is an outermost unsafe property access on `c` in `enclosingFn`.
+ */
+predicate getState(ReactComponent c, Expr getState, Function enclosingFn) {
   getState = getAnOutermostUnsafeAccess(c).asExpr() and
-  getState.getParentExpr*() = setState.getArgument(0) and
-  getState.getEnclosingFunction() = setState.getEnclosingFunction() and
+  enclosingFn = getState.getEnclosingFunction()
+}
+
+/**
+ * Holds if `setState` is a call to `setState` on `c` in `enclosingFn`.
+ */
+predicate setStateCall(ReactComponent c, MethodCallExpr setState, Function enclosingFn) {
+  setState = c.getAMethodCall("setState").asExpr() and
+  enclosingFn = setState.getEnclosingFunction()
+}
+
+/**
+ * Holds if `e` is syntactically nested within the first argument of a `setState` call.
+ */
+predicate inFirstArgToSetState(MethodCallExpr setState, Expr e) {
+  setStateCall(_, setState, _) and
+  e = setState.getArgument(0)
+  or
+  inFirstArgToSetState(setState, e.getParentExpr())
+}
+
+from ReactComponent c, MethodCallExpr setState, Expr getState, Function f
+where
+  getState(c, getState, f) and
+  setStateCall(c, setState, f) and
+  inFirstArgToSetState(setState, getState) and
   // ignore self-updates that only occur in one location: `setState({toggled: !this.state.toggled})`, they are most likely safe in practice
   not exists(DataFlow::PropWrite pwn |
     pwn = getAUniqueStateUpdate(c) and
