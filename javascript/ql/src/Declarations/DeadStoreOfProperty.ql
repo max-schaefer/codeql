@@ -13,10 +13,16 @@ import Expressions.DOMProperties
 import DeadStore
 
 /**
- * Holds if `write` writes to property `name` of `base`, and `base` is the only base object of `write`.
+ * Holds if `write`, which is the `i`th node of `bb`, writes to property `name` of `base`.
+ *
+ * We ignore writes to DOM properties and writes with an ambiguous base object.
  */
-predicate unambiguousPropWrite(DataFlow::SourceNode base, string name, DataFlow::PropWrite write) {
+predicate propWrite(
+  DataFlow::SourceNode base, string name, DataFlow::PropWrite write, ReachableBasicBlock bb, int i
+) {
   write = base.getAPropertyWrite(name) and
+  write.getWriteNode() = bb.getNode(i) and
+  not isDOMProperty(name) and
   not exists(DataFlow::SourceNode otherBase |
     otherBase != base and
     write = otherBase.getAPropertyWrite(name)
@@ -24,122 +30,141 @@ predicate unambiguousPropWrite(DataFlow::SourceNode base, string name, DataFlow:
 }
 
 /**
- * Holds if `assign1` and `assign2` both assign property `name` of the same object, and `assign2` post-dominates `assign1`.
+ * Holds if there is a write to property `name` in container `sc`.
  */
-predicate postDominatedPropWrite(
-  string name, DataFlow::PropWrite assign1, DataFlow::PropWrite assign2
-) {
-  exists(
-    ControlFlowNode write1, ControlFlowNode write2, DataFlow::SourceNode base,
-    ReachableBasicBlock block1, ReachableBasicBlock block2
-  |
-    write1 = assign1.getWriteNode() and
-    write2 = assign2.getWriteNode() and
-    block1 = write1.getBasicBlock() and
-    block2 = write2.getBasicBlock() and
-    unambiguousPropWrite(base, name, assign1) and
-    unambiguousPropWrite(base, name, assign2) and
-    block2.postDominates(block1) and
-    (
-      block1 = block2
-      implies
-      exists(int i1, int i2 |
-        write1 = block1.getNode(i1) and
-        write2 = block2.getNode(i2) and
-        i1 < i2
-      )
-    )
+predicate propWrittenInContainer(string name, StmtContainer sc) {
+  exists(BasicBlock bb |
+    propWrite(_, name, _, bb, _) and
+    sc = bb.getContainer()
   )
 }
 
 /**
- * Holds if `e` may access a property named `name`.
+ * Holds if `e`, which is the `i`th node of `bb`, may read a property named `name`.
+ *
+ * We consider expressions with side effects to read all properties written in the same container.
  */
-bindingset[name]
-predicate maybeAccessesProperty(Expr e, string name) {
-  e.(PropAccess).getPropertyName() = name and e instanceof RValue
-  or
-  // conservatively reject all side-effects
-  e.isImpure()
-}
-
-/**
- * Holds if `assign1` and `assign2` both assign property `name`, but `assign1` is dead because of `assign2`.
- */
-predicate isDeadAssignment(string name, DataFlow::PropWrite assign1, DataFlow::PropWrite assign2) {
-  postDominatedPropWrite(name, assign1, assign2) and
-  noPropAccessBetween(name, assign1, assign2) and
-  not isDOMProperty(name)
-}
-
-/**
- * Holds if `assign` assigns a property `name` that may be accessed somewhere else in the same block,
- * `after` indicates if the access happens before or after the node for `assign`.
- */
-bindingset[name]
-predicate maybeAccessesAssignedPropInBlock(string name, DataFlow::PropWrite assign, boolean after) {
-  exists(ReachableBasicBlock block, int i, int j, Expr e |
-    assign.getWriteNode() = block.getNode(i) and
-    e = block.getNode(j) and
-    maybeAccessesProperty(e, name)
-  |
-    after = true and i < j
+predicate propRead(BasicBlock bb, int i, Expr e, string name) {
+  e = bb.getNode(i) and
+  (
+    e.(PropAccess).getPropertyName() = name and
+    e instanceof RValue
     or
-    after = false and j < i
+    // conservatively reject all side-effects
+    e.isImpure() and
+    propWrittenInContainer(name, bb.getContainer())
   )
 }
 
 /**
- * Holds if `assign1` and `assign2` both assign property `name`, and the assigned property is not accessed between the two assignments.
+ * Gets the (zero-based) rank of the reference to property `name` at the `i`th node of `bb`
+ * among all references to the same property in `bb`.
  */
-bindingset[name]
-predicate noPropAccessBetween(string name, DataFlow::PropWrite assign1, DataFlow::PropWrite assign2) {
-  exists(
-    ControlFlowNode write1, ControlFlowNode write2, ReachableBasicBlock block1,
-    ReachableBasicBlock block2
-  |
-    write1 = assign1.getWriteNode() and
-    write2 = assign2.getWriteNode() and
-    write1.getBasicBlock() = block1 and
-    write2.getBasicBlock() = block2 and
-    if block1 = block2
-    then
-      // same block: check for access between
-      not exists(int i1, Expr mid, int i2 |
-        write1 = block1.getNode(i1) and
-        write2 = block2.getNode(i2) and
-        mid = block1.getNode([i1 + 1 .. i2 - 1]) and
-        maybeAccessesProperty(mid, name)
-      )
-    else
-      // other block:
-      not (
-        // check for an access after the first write node
-        maybeAccessesAssignedPropInBlock(name, assign1, true)
-        or
-        // check for an access between the two write blocks
-        exists(ReachableBasicBlock mid |
-          block1.getASuccessor+() = mid and
-          mid.getASuccessor+() = block2
-        |
-          maybeAccessesProperty(mid.getANode(), name)
-        )
-        or
-        // check for an access before the second write node
-        maybeAccessesAssignedPropInBlock(name, assign2, false)
-      )
+int propRefRank(BasicBlock bb, int i, string name) {
+  i = rank[result + 1](int j | propWrite(_, name, _, bb, j) or propRead(bb, j, _, name))
+}
+
+/**
+ * Gets the maximum rank of a reference to property `name` in `bb`.
+ */
+int maxPropRefRank(BasicBlock bb, string name) { result = max(propRefRank(bb, _, name)) }
+
+/**
+ * Gets the (zero-based) rank of the write to property `name` of `base` at the `i`th node of `bb`
+ * among all writes to property `name` of `base` in `bb`.
+ */
+int propWriteRank(DataFlow::SourceNode base, BasicBlock bb, int i, string name) {
+  i = rank[result + 1](int j | propWrite(base, name, _, bb, j))
+}
+
+/**
+ * Holds if `pw` is a write to property `name` on `base` whose rank among all references to
+ * `name` in `base` is `rrnk`, and whose rank among all writes to property `name` of `base`
+ * is `wrnk`.
+ */
+predicate rankedPropWrite(
+  DataFlow::SourceNode base, string name, DataFlow::PropWrite pw, BasicBlock bb, int rrnk, int wrnk
+) {
+  exists(int i |
+    propWrite(base, name, pw, bb, i) and
+    rrnk = propRefRank(bb, i, name) and
+    wrnk = propWriteRank(base, bb, i, name)
   )
 }
 
-from string name, DataFlow::PropWrite assign1, DataFlow::PropWrite assign2
+/**
+ * Holds if `pw1` and `pw2` are writes to property `name` on the same base object such
+ * that `pw1` is the last reference to `name` in `bb1` and `pw2` is the first reference
+ * to `name` in `bb2`, and `bb2` strictly post-dominates `bb1`.
+ */
+predicate postDominatingPropWrites(
+  string name, DataFlow::PropWrite pw1, DataFlow::PropWrite pw2, ReachableBasicBlock bb1,
+  ReachableBasicBlock bb2
+) {
+  exists(DataFlow::SourceNode base |
+    rankedPropWrite(base, name, pw1, bb1, maxPropRefRank(bb1, name), _) and
+    rankedPropWrite(base, name, pw2, bb2, 0, _) and
+    bb2.strictlyPostDominates(bb1)
+  )
+}
+
+/**
+ * Gets a basic block that is between `bb1` and `bb2`, that is, it is reachable from `bb1` and
+ * `bb2` is, in turn, reachable from it.
+ *
+ * We restrict `bb1` and `bb2` to be pairs of blocks containing post-dominating property
+ * writes in the sense of the predicate `postDominatingPropWrites` above. Due to post-dominance,
+ * we can compute the intermediate blocks by exploring the transitive successors of `bb1`,
+ * stopping whenever we hit `bb2`.
+ */
+BasicBlock getAnIntermediateBlock(string name, BasicBlock bb1, BasicBlock bb2) {
+  postDominatingPropWrites(name, _, _, bb1, bb2) and
+  result = bb1
+  or
+  exists(BasicBlock bb |
+    bb = getAnIntermediateBlock(name, bb1, bb2) and
+    bb != bb2 and
+    result = bb.getASuccessor()
+  )
+}
+
+/**
+ * Holds if property `name` is read in a basic block that is strictly between `bb1` and `bb2`.
+ */
+predicate propReadBetweenBlocks(string name, BasicBlock bb1, BasicBlock bb2) {
+  exists(BasicBlock bb |
+    bb = getAnIntermediateBlock(name, bb1, bb2) and
+    bb != bb1 and
+    bb != bb2 and
+    propRead(bb, _, _, name)
+  )
+}
+
+/**
+ * Holds if `pw1` and `pw2` both assign property `name`, but `pw1` is dead because
+ * `pw2` immediately overwrites the property.
+ */
+predicate isDeadAssignment(string name, DataFlow::PropWrite pw1, DataFlow::PropWrite pw2) {
+  exists(DataFlow::SourceNode base, BasicBlock bb, int r, int w |
+    rankedPropWrite(base, name, pw1, bb, r, w) and
+    rankedPropWrite(base, name, pw2, bb, r+1, w+1)
+  )
+  or
+  exists(BasicBlock bb1, BasicBlock bb2 |
+    postDominatingPropWrites(name, pw1, pw2, bb1, bb2) and
+    not propReadBetweenBlocks(name, bb1, bb2)
+  )
+}
+
+from string name, DataFlow::PropWrite pw1, DataFlow::PropWrite pw2
 where
-  isDeadAssignment(name, assign1, assign2) and
+  isDeadAssignment(name, pw1, pw2) and
   // whitelist
   not (
     // Google Closure Compiler pattern: `o.p = o['p'] = v`
     exists(PropAccess p1, PropAccess p2 |
-      p1 = assign1.getAstNode() and
-      p2 = assign2.getAstNode()
+      p1 = pw1.getAstNode() and
+      p2 = pw2.getAstNode()
     |
       p1 instanceof DotExpr and p2 instanceof IndexExpr
       or
@@ -147,23 +172,23 @@ where
     )
     or
     // don't flag overwrites for default values
-    isDefaultInit(assign1.getRhs().asExpr().getUnderlyingValue())
+    isDefaultInit(pw1.getRhs().asExpr().getUnderlyingValue())
     or
     // don't flag assignments in externs
-    assign1.getAstNode().inExternsFile()
+    pw1.getAstNode().inExternsFile()
     or
     // exclude result from js/overwritten-property
-    assign2.getBase() instanceof DataFlow::ObjectLiteralNode
+    pw2.getBase() instanceof DataFlow::ObjectLiteralNode
     or
     // exclude result from accessor declarations
-    assign1.getWriteNode() instanceof AccessorMethodDeclaration
+    pw1.getWriteNode() instanceof AccessorMethodDeclaration
   ) and
   // exclude results from non-value definitions from `Object.defineProperty`
   (
-    assign1 instanceof CallToObjectDefineProperty
+    pw1 instanceof CallToObjectDefineProperty
     implies
-    assign1.(CallToObjectDefineProperty).hasPropertyAttributeWrite("value", _)
+    pw1.(CallToObjectDefineProperty).hasPropertyAttributeWrite("value", _)
   )
-select assign1.getWriteNode(),
+select pw1.getWriteNode(),
   "This write to property '" + name + "' is useless, since $@ always overrides it.",
-  assign2.getWriteNode(), "another property write"
+  pw2.getWriteNode(), "another property write"
