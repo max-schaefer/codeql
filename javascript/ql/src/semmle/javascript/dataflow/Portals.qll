@@ -257,16 +257,9 @@ private class MemberPortal extends CompoundPortal, MkMemberPortal {
 }
 
 private module MemberPortal {
-  /** Gets a node representing a value flowing through `base`, that is, either an entry node or an exit node. */
-  private DataFlow::SourceNode portalBaseRef(Portal base, boolean escapes) {
-    result = base.getAnExitNode(escapes)
-    or
-    result = base.getAnEntryNode(escapes).getALocalSource()
-  }
-
   /** Holds if `read` is a read of property `prop` of a value flowing through `base`. */
   predicate reads(Portal base, string prop, DataFlow::SourceNode read, boolean isRemote) {
-    read = portalBaseRef(base, isRemote).getAPropertyRead(prop)
+    read = base.getAnExitNode(isRemote).getAPropertyRead(prop)
     or
     // imports are a kind of property read
     exists(string pkg |
@@ -289,7 +282,7 @@ private module MemberPortal {
    * right-hand side of that write.
    */
   predicate writes(Portal base, string prop, DataFlow::Node rhs, boolean escapes) {
-    portalBaseRef(base, escapes).hasPropertyWrite(prop, rhs)
+    base.getAnEntryNode(escapes).getALocalSource().hasPropertyWrite(prop, rhs)
     or
     InstancePortal::instanceMemberDef(base.(InstancePortal).getBasePortal(), prop, rhs, escapes)
     or
@@ -353,6 +346,13 @@ private module InstancePortal {
    * right-hand side of that definition.
    */
   predicate instanceMemberDef(Portal base, string name, DataFlow::Node rhs, boolean escapes) {
+    // prevent imprecision from conflating multiple classes/objects passed to the same function
+    // or constructed via meta-programming
+    (
+      base instanceof NpmPackagePortal or
+      base instanceof MemberPortal
+    )
+    and
     exists(AbstractInstance i, DataFlow::SourceNode ctor | isInstance(base, ctor, i, escapes) |
       // ES2015 instance method
       exists(MemberDefinition mem |
