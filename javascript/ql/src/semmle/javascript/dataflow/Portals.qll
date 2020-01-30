@@ -32,7 +32,6 @@ private newtype TPortal =
   } or
   MkInstancePortal(Portal base) {
     InstancePortal::instanceUse(base, _, _) or
-    InstancePortal::instanceDef(base, _, _) or
     InstancePortal::instanceMemberDef(base, _, _, _)
   } or
   MkParameterPortal(Portal base, int i) {
@@ -319,9 +318,7 @@ private class InstancePortal extends CompoundPortal, MkInstancePortal {
     InstancePortal::instanceUse(base, result, isRemote)
   }
 
-  override DataFlow::Node getAnEntryNode(boolean escapes) {
-    InstancePortal::instanceDef(base, result, escapes)
-  }
+  override DataFlow::Node getAnEntryNode(boolean escapes) { none() }
 
   override string toString() { result = "(instance " + base + ")" }
 }
@@ -349,8 +346,6 @@ private module InstancePortal {
   /** Holds if `nd` is an expression evaluating to an instance of `base`. */
   predicate instanceUse(Portal base, DataFlow::SourceNode nd, boolean isRemote) {
     nd = base.getAnExitNode(isRemote).getAnInstantiation()
-    or
-    isInstance(base, _, nd.analyze().getAValue(), isRemote)
   }
 
   /**
@@ -374,15 +369,6 @@ private module InstancePortal {
         pw = ctor.getAPropertyRead("prototype").getAPropertyWrite(name) and
         rhs = pw.getRhs()
       )
-    )
-  }
-
-  /** Holds if `nd` is a return node of a function flowing into `base`. */
-  predicate instanceDef(Portal base, DataFlow::Node nd, boolean escapes) {
-    exists(DataFlow::FunctionNode fn |
-      isInstance(base, fn, _, escapes) and
-      nd = fn.getAReturn() and
-      instantiable(fn)
     )
   }
 }
