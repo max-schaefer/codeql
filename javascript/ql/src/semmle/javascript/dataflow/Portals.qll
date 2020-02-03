@@ -122,7 +122,7 @@ class Portal extends TPortal {
  * Assignments to `module.exports` are entries to this portal, while
  * imports are exits.
  */
-private class NpmPackagePortal extends Portal, MkNpmPackagePortal {
+class NpmPackagePortal extends Portal, MkNpmPackagePortal {
   string pkgName;
 
   NpmPackagePortal() { this = MkNpmPackagePortal(pkgName) }
@@ -145,7 +145,7 @@ private class NpmPackagePortal extends Portal, MkNpmPackagePortal {
   override int depth() { result = 1 }
 }
 
-private module NpmPackagePortal {
+module NpmPackagePortal {
   /** Gets an import of `imported` inside package `importer`. */
   pragma[noinline]
   private DataFlow::SourceNode getAModuleImport(NPMPackage importer, string imported) {
@@ -183,12 +183,12 @@ private module NpmPackagePortal {
     exists(PackageJSON pkg |
       // don't construct portals for private packages
       not pkg.isPrivate() and
-      // don't construct portals for vendored-in packages
-      exists(Folder pkgDir | pkgDir = pkg.getFile().getParentContainer() |
-        pkgDir.getRelativePath() = ""
-        or
-        not pkgDir.getParentContainer().getBaseName() = "node_modules"
-      ) and
+      // // don't construct portals for vendored-in packages
+      // exists(Folder pkgDir | pkgDir = pkg.getFile().getParentContainer() |
+      //   pkgDir.getRelativePath() = ""
+      //   or
+      //   not pkgDir.getParentContainer().getBaseName() = "node_modules"
+      // ) and
       pkg.getPackageName() = pkgName and
       result = pkg.getMainModule()
     )
