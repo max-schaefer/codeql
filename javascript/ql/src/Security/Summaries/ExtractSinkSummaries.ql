@@ -12,12 +12,12 @@ import PortalExitSource
 import SinkFromAnnotation
 
 from DataFlow::Configuration cfg, DataFlow::SourcePathNode source, DataFlow::SinkPathNode sink,
-  Portal p, DataFlow::MidPathNode last
+  ExitNode x, DataFlow::MidPathNode last
 where
   cfg = source.getConfiguration() and
   last = source.getASuccessor*() and
   sink = last.getASuccessor() and
-  p = source.getNode().(PortalExitSource).getPortal() and
+  x = source.getNode().(PortalExitSource).getPortalNode() and
   // avoid constructing infeasible paths
   last.getPathSummary().hasReturn() = false
-select p.toString(), last.getPathSummary().getStartLabel().toString(), cfg.toString()
+select x.getPath(), last.getPathSummary().getStartLabel().toString(), cfg.toString()

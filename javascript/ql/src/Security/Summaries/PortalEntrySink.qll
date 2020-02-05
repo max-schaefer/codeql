@@ -6,12 +6,12 @@ import semmle.javascript.dataflow.Portals
  * configuration currently in scope.
  */
 class PortalEntrySink extends DataFlow::AdditionalSink {
-  Portal p;
+  EntryNode e;
 
-  PortalEntrySink() { this = p.getAnEntryNode(true) }
+  PortalEntrySink() { this = e.asDataFlowNode() }
 
   override predicate isSinkFor(DataFlow::Configuration cfg, DataFlow::FlowLabel lbl) { any() }
 
-  /** Gets the portal of which this is an entry node. */
-  Portal getPortal() { result = p }
+  /** Gets the portal node to which this corresponds. */
+  EntryNode getPortalNode() { result = e }
 }

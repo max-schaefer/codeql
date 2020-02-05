@@ -6,12 +6,12 @@ import semmle.javascript.dataflow.Portals
  * configuration currently in scope.
  */
 class PortalExitSource extends DataFlow::AdditionalSource {
-  Portal p;
+  ExitNode x;
 
-  PortalExitSource() { this = p.getAnExitNode(true) }
+  PortalExitSource() { this = x.asDataFlowNode() }
 
   override predicate isSourceFor(DataFlow::Configuration cfg, DataFlow::FlowLabel lbl) { any() }
 
-  /** Gets the portal of which this is an exit node. */
-  Portal getPortal() { result = p }
+  /** Gets the portal node to which this corresponds. */
+  ExitNode getPortalNode() { result = x }
 }

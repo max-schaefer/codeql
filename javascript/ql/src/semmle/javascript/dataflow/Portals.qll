@@ -351,24 +351,27 @@ private module InstancePortal {
     (
       base instanceof NpmPackagePortal or
       base instanceof MemberPortal
+    ) and
+    exists(DataFlow::SourceNode ctor | isInstance(base, ctor, _, escapes) |
+      instanceMemberDef(ctor, name, rhs)
     )
-    and
-    exists(AbstractInstance i, DataFlow::SourceNode ctor | isInstance(base, ctor, i, escapes) |
-      // ES2015 instance method
-      exists(MemberDefinition mem |
-        mem = ctor.getAstNode().(ClassDefinition).getAMember() and
-        not mem.isStatic() and
-        not mem instanceof ConstructorDefinition
-      |
-        name = mem.getName() and
-        rhs = DataFlow::valueNode(mem.getInit())
-      )
-      or
-      // ES5 instance method
-      exists(DataFlow::PropWrite pw |
-        pw = ctor.getAPropertyRead("prototype").getAPropertyWrite(name) and
-        rhs = pw.getRhs()
-      )
+  }
+
+  predicate instanceMemberDef(DataFlow::SourceNode ctor, string name, DataFlow::Node rhs) {
+    // ES2015 instance method
+    exists(MemberDefinition mem |
+      mem = ctor.getAstNode().(ClassDefinition).getAMember() and
+      not mem.isStatic() and
+      not mem instanceof ConstructorDefinition
+    |
+      name = mem.getName() and
+      rhs = DataFlow::valueNode(mem.getInit())
+    )
+    or
+    // ES5 instance method
+    exists(DataFlow::PropWrite pw |
+      pw = ctor.getAPropertyRead("prototype").getAPropertyWrite(name) and
+      rhs = pw.getRhs()
     )
   }
 }
@@ -442,4 +445,203 @@ private module ReturnPortal {
   predicate returns(Portal base, DataFlow::Node ret, boolean escapes) {
     ret = base.getAnEntryNode(escapes).getALocalSource().(DataFlow::FunctionNode).getAReturn()
   }
+}
+
+newtype TPortalNode =
+  MkRootNode() or
+  MkSyntheticExportNode(string pkgName) { MemberPortal::exports(pkgName, _, _) } or
+  MkSyntheticImportNode(string pkgName) { NpmPackagePortal::imports(_, pkgName, _) } or
+  MkSyntheticInstanceNode(DataFlow::SourceNode ctor) {
+    InstancePortal::instanceMemberDef(ctor, _, _)
+  } or
+  MkEntryNode(DataFlow::Node nd) or
+  MkExitNode(DataFlow::SourceNode nd)
+
+class PortalNode extends TPortalNode {
+  PortalNode() { portalEdge*(MkRootNode(), this) }
+
+  predicate hasLocationInfo(string path, int startline, int startcol, int endline, int endcol) {
+    (
+      this instanceof MkRootNode or
+      this instanceof MkSyntheticExportNode or
+      this instanceof MkSyntheticImportNode
+    ) and
+    path = "" and
+    startline = 0 and
+    startcol = 0 and
+    endline = 0 and
+    endcol = 0
+    or
+    exists(DataFlow::Node ctor | this = MkSyntheticInstanceNode(ctor) |
+      ctor.hasLocationInfo(path, startline, startcol, _, _) and
+      endline = startline and
+      endcol = startcol
+    )
+    or
+    exists(DataFlow::Node nd | this = MkEntryNode(nd) or this = MkExitNode(nd) |
+      nd.hasLocationInfo(path, startline, startcol, endline, endcol)
+    )
+  }
+
+  string toString() {
+    this = MkRootNode() and result = "<root>"
+    or
+    this instanceof MkSyntheticExportNode and
+    result = "export"
+    or
+    this instanceof MkSyntheticImportNode and
+    result = "import"
+    or
+    exists(DataFlow::Node ctor | this = MkSyntheticInstanceNode(ctor) | result = "new " + ctor)
+    or
+    exists(DataFlow::Node nd | this = MkEntryNode(nd) | result = "-> " + nd)
+    or
+    exists(DataFlow::Node nd | this = MkExitNode(nd) | result = nd + " ->")
+  }
+
+  PortalNode getAPredecessor(string lbl) { portalEdge(result, lbl, this) }
+
+  Portal getPortal() {
+    exists(string pkgName |
+      portalEdge(MkRootNode(), "package " + pkgName, this) and
+      result = MkNpmPackagePortal(pkgName)
+    )
+    or
+    exists(Portal base, string prop | result = MkMemberPortal(base, prop) |
+      base = getAPredecessor("member " + prop).getPortal()
+    )
+    or
+    exists(Portal base | result = MkInstancePortal(base) |
+      base = getAPredecessor("instance").getPortal()
+    )
+    or
+    exists(Portal base, int i | result = MkParameterPortal(base, i) |
+      base = getAPredecessor("parameter " + i).getPortal()
+    )
+    or
+    exists(Portal base | result = MkReturnPortal(base) |
+      base = getAPredecessor("return").getPortal()
+    )
+  }
+
+  private string getAPath() {
+    this instanceof MkRootNode and
+    result = ""
+    or
+    exists(string lbl |
+      result = "(" + lbl + " " + getAPredecessor(lbl).getAPath() + ")" and
+      // avoid producing strings longer than 1M
+      result.length() < 1000000
+    )
+  }
+
+  string getPath() {
+    result = min(string p | p = getAPath() | p order by p.length())
+  }
+
+  DataFlow::Node asDataFlowNode() {
+    this = MkEntryNode(result) or
+    this = MkExitNode(result)
+  }
+}
+
+class EntryNode extends PortalNode {
+  EntryNode() {
+    this instanceof MkEntryNode or
+    this instanceof MkSyntheticExportNode or
+    this instanceof MkSyntheticInstanceNode
+  }
+}
+
+class ExitNode extends PortalNode {
+  ExitNode() {
+    this instanceof MkExitNode or
+    this instanceof MkSyntheticImportNode
+  }
+}
+
+private predicate portalEdge(TPortalNode pred, TPortalNode succ) { portalEdge(pred, _, succ) }
+
+predicate portalEdge(TPortalNode pred, string lbl, TPortalNode succ) {
+  exists(string pkgName | lbl = "package " + pkgName |
+    pred = MkRootNode() and
+    succ = MkEntryNode(any(DataFlow::Node exp | NpmPackagePortal::exports(pkgName, exp)))
+    or
+    pred = MkRootNode() and
+    succ = MkSyntheticExportNode(pkgName)
+    or
+    pred = MkRootNode() and
+    succ = MkExitNode(any(DataFlow::Node imp | NpmPackagePortal::imports(imp, pkgName)))
+    or
+    pred = MkRootNode() and
+    succ = MkSyntheticImportNode(pkgName)
+  )
+  or
+  exists(string prop |
+    lbl = "member " + prop and
+    // only consider alpha-numeric properties, excluding special properties
+    // and properties whose names look like they are meant to be internal
+    prop.regexpMatch("(?!prototype$|__)[a-zA-Z_]\\w*")
+  |
+    exists(DataFlow::SourceNode base |
+      pred = MkExitNode(base) and
+      succ = MkExitNode(base.getAPropertyRead(prop))
+    )
+    or
+    // imports are a kind of property read
+    exists(string pkgName, DataFlow::Node read |
+      NpmPackagePortal::imports(read, pkgName, prop) and
+      pred = MkSyntheticImportNode(pkgName) and
+      succ = MkExitNode(read)
+    )
+    or
+    exists(DataFlow::Node nd |
+      pred = MkEntryNode(nd) and
+      succ = MkEntryNode(nd.getALocalSource().getAPropertyWrite(prop).getRhs())
+    )
+    or
+    exists(DataFlow::SourceNode ctor, DataFlow::Node rhs |
+      InstancePortal::instanceMemberDef(ctor, prop, rhs) and
+      pred = MkSyntheticInstanceNode(ctor) and
+      succ = MkEntryNode(rhs)
+    )
+    or
+    // exports are a kind of property write.
+    exists(string pkgName, DataFlow::Node rhs |
+      MemberPortal::exports(pkgName, prop, rhs) and
+      pred = MkSyntheticExportNode(pkgName) and
+      succ = MkEntryNode(rhs)
+    )
+  )
+  or
+  exists(DataFlow::SourceNode ctor |
+    pred = MkExitNode(ctor) and
+    lbl = "instance" and
+    succ = MkExitNode(ctor.getAnInstantiation())
+  )
+  or
+  exists(DataFlow::Node base |
+    pred = MkEntryNode(base) and
+    lbl = "instance" and
+    succ = MkSyntheticInstanceNode(base.getALocalSource())
+  )
+  or
+  exists(int i | lbl = "parameter " + i |
+    exists(DataFlow::Node base |
+      pred = MkExitNode(base) and
+      succ = MkEntryNode(base.(DataFlow::SourceNode).getAnInvocation().getArgument(i))
+      or
+      pred = MkEntryNode(base) and
+      succ = MkExitNode(base.getALocalSource().(DataFlow::FunctionNode).getParameter(i))
+    )
+  )
+  or
+  lbl = "return" and
+  exists(DataFlow::Node base |
+    pred = MkEntryNode(base) and
+    succ = MkEntryNode(base.getALocalSource().(DataFlow::FunctionNode).getAReturn())
+    or
+    pred = MkExitNode(base) and
+    succ = MkExitNode(base.(DataFlow::SourceNode).getAnInvocation())
+  )
 }

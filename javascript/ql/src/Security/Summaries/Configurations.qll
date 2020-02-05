@@ -6,4 +6,4 @@
  */
 
 import javascript
-import semmle.javascript.security.dataflow.CodeInjection
+import semmle.javascript.security.dataflow.TaintedPath
