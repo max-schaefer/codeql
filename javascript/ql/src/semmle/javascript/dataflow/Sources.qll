@@ -264,6 +264,10 @@ module SourceNode {
       this = DataFlow::destructuredModuleImportNode(_)
       or
       this = DataFlow::globalAccessPathRootPseudoNode()
+      or
+      this = DataFlow::defaultModuleNode(_)
+      or
+      this = DataFlow::defaultExportsNode(_)
     }
   }
 }

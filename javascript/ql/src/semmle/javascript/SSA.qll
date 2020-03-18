@@ -742,4 +742,7 @@ module SSA {
 
   /** Gets the SSA variable corresponding to `d`. */
   SsaVariable variable(VarDef d) { result.getDefinition() = definition(d) }
+
+  /** Gets the SSA variable corresponding to the implicit initialization of `v`. */
+  SsaImplicitInit implicitInit(SsaSourceVariable v) { result.getSourceVariable() = v}
 }

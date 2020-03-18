@@ -37,6 +37,9 @@ module DataFlow {
       (kind = "call" or kind = "apply")
     } or
     TThisNode(StmtContainer f) { f.(Function).getThisBinder() = f or f instanceof TopLevel } or
+    TDefaultModuleNode(NodeModule m) or
+    TDefaultExportsNode(NodeModule m) or
+    TDefaultExportsInitNode(NodeModule m) or
     TUnusedParameterNode(SimpleParameter p) { not exists(SSA::definition(p)) } or
     TDestructuredModuleImportNode(ImportDeclaration decl) {
       exists(decl.getASpecifier().getImportedName())
@@ -1222,6 +1225,83 @@ module DataFlow {
   }
 
   /**
+   * A data-flow node representing the default value of `module` in a CommonJS module.
+   */
+  class DefaultModuleNode extends Node, TDefaultModuleNode {
+    NodeModule m;
+
+    DefaultModuleNode() { this = TDefaultModuleNode(m) }
+
+    override string toString() { result = "module" }
+
+    override BasicBlock getBasicBlock() { result = m.getEntryBB() }
+
+    override predicate hasLocationInfo(
+      string filepath, int startline, int startcolumn, int endline, int endcolumn
+    ) {
+      m
+          .getEntry()
+          .getLocation()
+          .hasLocationInfo(filepath, startline, startcolumn, endline, endcolumn)
+    }
+  }
+
+  /**
+   * A data-flow node representing the default value of `exports` in a CommonJS module.
+   */
+  class DefaultExportsNode extends Node, TDefaultExportsNode {
+    NodeModule m;
+
+    DefaultExportsNode() { this = TDefaultExportsNode(m) }
+
+    override string toString() { result = "exports" }
+
+    override BasicBlock getBasicBlock() { result = m.getEntryBB() }
+
+    override predicate hasLocationInfo(
+      string filepath, int startline, int startcolumn, int endline, int endcolumn
+    ) {
+      m
+          .getEntry()
+          .getLocation()
+          .hasLocationInfo(filepath, startline, startcolumn, endline, endcolumn)
+    }
+  }
+
+  /**
+   * A data-flow node representing the implicit initialization of `module.exports` in a CommonJS
+   * module.
+   */
+  class DefaultExportsInitNode extends Node, TDefaultExportsInitNode, PropWrite {
+    NodeModule m;
+
+    DefaultExportsInitNode() { this = TDefaultExportsInitNode(m) }
+
+    override string toString() { result = "module.exports = exports" }
+
+    override BasicBlock getBasicBlock() { result = m.getEntryBB() }
+
+    override predicate hasLocationInfo(
+      string filepath, int startline, int startcolumn, int endline, int endcolumn
+    ) {
+      m
+          .getEntry()
+          .getLocation()
+          .hasLocationInfo(filepath, startline, startcolumn, endline, endcolumn)
+    }
+
+    override DataFlow::Node getBase() { result = TDefaultModuleNode(m) }
+
+    override string getPropertyName() { result = "exports" }
+
+    override Expr getPropertyNameExpr() { none() }
+
+    override DataFlow::Node getRhs() { result = TDefaultExportsNode(m) }
+
+    override ControlFlowNode getWriteNode() { result = m.getEntry() }
+  }
+
+  /**
    * Gets the data flow node corresponding to `nd`.
    *
    * This predicate is only defined for expressions, properties, and for statements that declare
@@ -1256,6 +1336,16 @@ module DataFlow {
    * Has no result if `container` is an arrow function.
    */
   DataFlow::ThisNode thisNode(StmtContainer container) { result = TThisNode(container) }
+
+  /**
+   * Gets the node representing the default value of `module` in module `m`.
+   */
+  DataFlow::DefaultModuleNode defaultModuleNode(NodeModule m) { result = TDefaultModuleNode(m) }
+
+  /**
+   * Gets the node representing the default value of `exports` in module `m`.
+   */
+  DataFlow::DefaultExportsNode defaultExportsNode(NodeModule m) { result = TDefaultExportsNode(m) }
 
   /**
    * INTERNAL. DO NOT USE.
@@ -1416,6 +1506,18 @@ module DataFlow {
     exists(ThisExpr thiz |
       pred = TThisNode(thiz.getBindingContainer()) and
       succ = valueNode(thiz)
+    )
+    or
+    // flow from default value of `module` to (non-overwritten) references to `module`
+    exists(NodeModule m |
+      pred = TDefaultModuleNode(m) and
+      succ = TSsaDefNode(SSA::implicitInit(m.getModuleVariable()))
+    )
+    or
+    // flow from default value of `exports` to (non-overwritten) references to `exports`
+    exists(NodeModule m |
+      pred = TDefaultExportsNode(m) and
+      succ = TSsaDefNode(SSA::implicitInit(m.getExportsVariable()))
     )
     or
     // `f.call(...)` and `f.apply(...)` evaluate to the result of the reflective call they perform

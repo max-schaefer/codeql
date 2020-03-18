@@ -418,3 +418,21 @@ private class AnalyzedExportNamespaceSpecifier extends AnalyzedPropertyWrite, Da
     value = TAbstractExportsObject(decl.getReExportedModule())
   }
 }
+
+/**
+ * Flow analysis for the initial value of `module` in a CommonJS module.
+ */
+private class AnalyzedDefaultModuleNode extends AnalyzedNode, DataFlow::DefaultModuleNode {
+  override AbstractValue getALocalValue() {
+    result = TAbstractModuleObject(m)
+  }
+}
+
+/**
+ * Flow analysis for the initial value of `exports` in a CommonJS module.
+ */
+private class AnalyzedDefaultExportsNode extends AnalyzedNode, AnalyzedPropertyWrite, DataFlow::DefaultExportsNode {
+  override AbstractValue getALocalValue() {
+    result = TAbstractExportsObject(m)
+  }
+}
