@@ -1,0 +1,23 @@
+<!DOCTYPE qhelp PUBLIC "-//Semmle//qhelp//EN" "qhelp.dtd">
+<qhelp>
+
+<overview>
+TBD
+</overview>
+
+<recommendation>
+TBD
+</recommendation>
+
+<example>
+TBD
+</example>
+
+<references>
+<li>
+OWASP:
+<a href="https://www.owasp.org/index.php/Trojan_Horse">Trojan Horse</a>.
+</li>
+</references>
+
+</qhelp>

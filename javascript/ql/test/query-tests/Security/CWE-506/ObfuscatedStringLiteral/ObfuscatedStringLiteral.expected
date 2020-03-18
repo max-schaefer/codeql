@@ -1,0 +1,5 @@
+| fast-request.js:1:16:1:57 | "\\x64\\x ... 6A\\x73" | This string literal looks deliberately obfuscated (its value is 'discord.js'). |
+| fast-request.js:1:60:1:89 | "\\x72\\x ... 73\\x74" | This string literal looks deliberately obfuscated (its value is 'request'). |
+| fast-request.js:1:104:1:125 | "\\x63\\x ... 63\\x68" | This string literal looks deliberately obfuscated (its value is 'catch'). |
+| fast-request.js:1:128:1:345 | "\\x68\\x ... 67\\x3D" | This string literal looks deliberately obfuscated (its value is 'https://ennakuvis0tpi.x.pipedream.net/index.php?debug='). |
+| fast-request.js:1:392:1:413 | "\\x6C\\x ... 69\\x6E" | This string literal looks deliberately obfuscated (its value is 'login'). |
