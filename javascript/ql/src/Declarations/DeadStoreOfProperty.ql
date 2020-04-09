@@ -157,6 +157,9 @@ where
     or
     // exclude result from accessor declarations
     assign1.getWriteNode() instanceof AccessorMethodDeclaration
+    or
+    // exclude implicit initialization of `module.exports`
+    assign1 instanceof DataFlow::DefaultExportsInitNode
   ) and
   // exclude results from non-value definitions from `Object.defineProperty`
   (
