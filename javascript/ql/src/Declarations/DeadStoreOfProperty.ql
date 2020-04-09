@@ -13,14 +13,18 @@ import Expressions.DOMProperties
 import DeadStore
 
 /**
- * Holds if `write` writes to property `name` of `base`, and `base` is the only base object of `write`.
+ * Holds if `write` writes to property `name` of `base`, where `base` is the only base object of
+ * `write`, and that write happens at node `i` of basic block `bb`.
  */
-predicate unambiguousPropWrite(DataFlow::SourceNode base, string name, DataFlow::PropWrite write) {
+predicate unambiguousPropWrite(
+  DataFlow::SourceNode base, string name, DataFlow::PropWrite write, ReachableBasicBlock bb, int i
+) {
   write = base.getAPropertyWrite(name) and
   not exists(DataFlow::SourceNode otherBase |
     otherBase != base and
     write = otherBase.getAPropertyWrite(name)
-  )
+  ) and
+  write.getWriteNode() = bb.getNode(i)
 }
 
 /**
@@ -30,25 +34,15 @@ predicate postDominatedPropWrite(
   string name, DataFlow::PropWrite assign1, DataFlow::PropWrite assign2
 ) {
   exists(
-    ControlFlowNode write1, ControlFlowNode write2, DataFlow::SourceNode base,
-    ReachableBasicBlock block1, ReachableBasicBlock block2
+    DataFlow::SourceNode base, ReachableBasicBlock bb1, ReachableBasicBlock bb2, int i1, int i2
   |
-    write1 = assign1.getWriteNode() and
-    write2 = assign2.getWriteNode() and
-    block1 = write1.getBasicBlock() and
-    block2 = write2.getBasicBlock() and
-    unambiguousPropWrite(base, name, assign1) and
-    unambiguousPropWrite(base, name, assign2) and
-    block2.postDominates(block1) and
-    (
-      block1 = block2
-      implies
-      exists(int i1, int i2 |
-        write1 = block1.getNode(i1) and
-        write2 = block2.getNode(i2) and
-        i1 < i2
-      )
-    )
+    unambiguousPropWrite(base, name, assign1, bb1, i1) and
+    unambiguousPropWrite(base, name, assign2, bb2, i2) and
+    bb2.postDominates(bb1)
+  |
+    bb1 != bb2
+    or
+    i1 < i2
   )
 }
 
