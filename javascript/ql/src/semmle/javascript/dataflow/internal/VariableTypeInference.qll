@@ -374,10 +374,6 @@ private predicate nodeBuiltins(Variable var, AbstractValue av) {
   exists(Module m, string name | var = m.getScope().getVariable(name) |
     name = "require" and av = TIndefiniteAbstractValue("heap")
     or
-    name = "module" and av = TAbstractModuleObject(m)
-    or
-    name = "exports" and av = TAbstractExportsObject(m)
-    or
     name = "arguments" and av = TAbstractOtherObject()
     or
     (name = "__filename" or name = "__dirname") and

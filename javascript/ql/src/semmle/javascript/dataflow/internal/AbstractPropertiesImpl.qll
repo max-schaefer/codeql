@@ -30,13 +30,6 @@ newtype TAbstractProperty =
  * of the concrete objects represented by `baseVal`.
  */
 AbstractValue getAnInitialPropertyValue(DefiniteAbstractValue baseVal, string propertyName) {
-  // initially, `module.exports === exports`
-  exists(Module m |
-    baseVal = TAbstractModuleObject(m) and
-    propertyName = "exports" and
-    result = TAbstractExportsObject(m)
-  )
-  or
   // class members
   result = getAnInitialMemberValue(getMember(baseVal, propertyName))
   or
