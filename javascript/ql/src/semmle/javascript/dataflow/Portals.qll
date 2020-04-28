@@ -290,7 +290,16 @@ private module MemberPortal {
    * right-hand side of that write.
    */
   predicate writes(Portal base, string prop, DataFlow::Node rhs, boolean escapes) {
-    portalBaseRef(base, escapes).hasPropertyWrite(prop, rhs)
+    exists(DataFlow::SourceNode baseRef, DataFlow::PropWrite pw |
+      baseRef = portalBaseRef(base, escapes) and
+      pw = baseRef.getAPropertyWrite(prop) and
+      rhs = pw.getRhs() and
+      // don't track through cyclic property writes `base.prop = base`
+      not exists(Variable v |
+        pw.getBase().asExpr() = v.getAnAccess() and
+        rhs.asExpr() = v.getAnAccess()
+      )
+    )
     or
     InstancePortal::instanceMemberDef(base.(InstancePortal).getBasePortal(), prop, rhs, escapes)
     or
@@ -454,6 +463,11 @@ private module ReturnPortal {
 
   /** Holds if `ret` is a return node of a function flowing through `callee`. */
   predicate returns(Portal base, DataFlow::Node ret, boolean escapes) {
-    ret = base.getAnEntryNode(escapes).getALocalSource().(DataFlow::FunctionNode).getAReturn()
+    exists(DataFlow::FunctionNode fn |
+      fn = base.getAnEntryNode(escapes).getALocalSource() and
+      ret = fn.getAReturn() and
+      // don't track through chaining functions
+      not ret.asExpr() = fn.getFunction().getVariable().getAnAccess()
+    )
   }
 }
