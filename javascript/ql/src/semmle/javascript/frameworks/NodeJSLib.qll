@@ -1161,5 +1161,23 @@ module NodeJSLib {
     DataFlow::SourceNode moduleMember(string member) {
       result = moduleImport().getAPropertyRead(member)
     }
+
+    /**
+     * A path expression of the form `path.resolve(p)` where
+     * `p` is also a path expression.
+     */
+    private class SingleElementResolvedPath extends PathExpr, @callexpr {
+      PathExpr arg;
+
+      SingleElementResolvedPath() {
+        exists(MethodCallExpr call | call = this |
+          call = moduleMember("resolve").getACall().asExpr() and
+          call.getNumArgument() = 1 and
+          arg = call.getArgument(0)
+        )
+      }
+
+      override string getValue() { result = arg.getValue() }
+    }
   }
 }
