@@ -1196,6 +1196,17 @@ module DataFlow {
   }
 
   /**
+   * An internal pseudo-node representing the module object from an internal package.
+   */
+  private class InternalModuleRoot extends Node, TInternalModuleRoot {
+    Module mod;
+
+    InternalModuleRoot() { this = TInternalModuleRoot(mod) }
+
+    override string toString() { result = "'" + mod.getFile().getRelativePath() + "'" }
+  }
+
+  /**
    * INTERNAL. DO NOT USE.
    *
    * Gets a data flow node representing the given captured variable.
@@ -1237,6 +1248,8 @@ module DataFlow {
    * Has no result if `container` is an arrow function.
    */
   DataFlow::ThisNode thisNode(StmtContainer container) { result = TThisNode(container) }
+
+  DataFlow::Node internalModuleRoot(Module mod) { result = TInternalModuleRoot(mod) }
 
   /**
    * INTERNAL. DO NOT USE.

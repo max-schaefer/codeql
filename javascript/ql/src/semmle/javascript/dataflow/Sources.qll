@@ -8,6 +8,7 @@
 
 private import javascript
 private import semmle.javascript.dataflow.TypeTracking
+private import internal.DataFlowNode
 
 /**
  * A source node for local data flow, that is, a node from which local data flow is tracked.
@@ -319,6 +320,8 @@ module SourceNode {
       this = DataFlow::destructuredModuleImportNode(_)
       or
       this = DataFlow::globalAccessPathRootPseudoNode()
+      or
+      this instanceof TInternalModuleRoot
     }
   }
 }

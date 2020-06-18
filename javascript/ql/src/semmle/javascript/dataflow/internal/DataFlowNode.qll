@@ -29,4 +29,5 @@ newtype TNode =
   THtmlAttributeNode(HTML::Attribute attr) or
   TExceptionalFunctionReturnNode(Function f) or
   TExceptionalInvocationReturnNode(InvokeExpr e) or
-  TGlobalAccessPathRoot()
+  TGlobalAccessPathRoot() or
+  TInternalModuleRoot(Module mod)
