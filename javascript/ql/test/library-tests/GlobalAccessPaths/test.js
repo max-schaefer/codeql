@@ -38,4 +38,5 @@ function lazy() {
   var lazyInit;
   lazyInit = foo.bar; // 'foo.bar'
   lazyInit;
+  foo && foo.bar; // 'foo.bar'
 }
