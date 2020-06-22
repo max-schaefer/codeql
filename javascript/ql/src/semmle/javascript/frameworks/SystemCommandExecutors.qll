@@ -4,6 +4,7 @@
  */
 
 import javascript
+private import ApiGraphs
 
 private class SystemCommandExecutors extends SystemCommandExecution, DataFlow::InvokeNode {
   int cmdArg;
@@ -12,9 +13,13 @@ private class SystemCommandExecutors extends SystemCommandExecution, DataFlow::I
   boolean sync;
 
   SystemCommandExecutors() {
-    exists(string mod, DataFlow::SourceNode callee |
+    exists(string mod, API::Feature callee |
       exists(string method |
-        mod = "cross-spawn" and method = "sync" and cmdArg = 0 and shell = false and optionsArg = -1
+        mod = "cross-spawn" and
+        method = "sync" and
+        cmdArg = 0 and
+        shell = false and
+        optionsArg = -1
         or
         mod = "execa" and
         optionsArg = -1 and
@@ -33,7 +38,7 @@ private class SystemCommandExecutors extends SystemCommandExecution, DataFlow::I
         ) and
         cmdArg = 0
       |
-        callee = DataFlow::moduleMember(mod, method) and
+        callee = API::moduleImport(mod).getMember(method) and
         sync = getSync(method)
       )
       or
@@ -51,13 +56,19 @@ private class SystemCommandExecutors extends SystemCommandExecution, DataFlow::I
         )
         or
         shell = true and
-        mod = "exec" and
-        optionsArg = -2 and
-        cmdArg = 0
+        (
+          mod = "exec" and
+          optionsArg = -2 and
+          cmdArg = 0
+          or
+          mod = "remote-exec" and
+          cmdArg = 1 and
+          optionsArg = -1
+        )
       ) and
-      callee = DataFlow::moduleImport(mod)
+      callee = API::moduleImport(mod)
     |
-      this = callee.getACall()
+      this = callee.getReturn().getAUse()
     )
   }
 
