@@ -4,6 +4,7 @@
  */
 
 import javascript
+private import ApiGraphs
 
 private class SystemCommandExecutors extends SystemCommandExecution, DataFlow::InvokeNode {
   int cmdArg;
@@ -12,11 +13,15 @@ private class SystemCommandExecutors extends SystemCommandExecution, DataFlow::I
   boolean sync;
 
   SystemCommandExecutors() {
-    exists(string mod, DataFlow::SourceNode callee |
+    exists(string mod, LocalApiGraph::Node callee |
       exists(string method |
-        mod = "cross-spawn" and method = "sync" and cmdArg = 0 and shell = false and optionsArg = -1
+        mod = "npm:cross-spawn" and
+        method = "sync" and
+        cmdArg = 0 and
+        shell = false and
+        optionsArg = -1
         or
-        mod = "execa" and
+        mod = "npm:execa" and
         optionsArg = -1 and
         (
           shell = false and
@@ -33,7 +38,7 @@ private class SystemCommandExecutors extends SystemCommandExecution, DataFlow::I
         ) and
         cmdArg = 0
       |
-        callee = DataFlow::moduleMember(mod, method) and
+        callee = LocalApiGraph::moduleImport(mod).getMember(method) and
         sync = getSync(method)
       )
       or
@@ -41,23 +46,29 @@ private class SystemCommandExecutors extends SystemCommandExecution, DataFlow::I
       (
         shell = false and
         (
-          mod = "cross-spawn" and cmdArg = 0 and optionsArg = -1
+          mod = "npm:cross-spawn" and cmdArg = 0 and optionsArg = -1
           or
-          mod = "cross-spawn-async" and cmdArg = 0 and optionsArg = -1
+          mod = "npm:cross-spawn-async" and cmdArg = 0 and optionsArg = -1
           or
-          mod = "exec-async" and cmdArg = 0 and optionsArg = -1
+          mod = "npm:exec-async" and cmdArg = 0 and optionsArg = -1
           or
-          mod = "execa" and cmdArg = 0 and optionsArg = -1
+          mod = "npm:execa" and cmdArg = 0 and optionsArg = -1
         )
         or
         shell = true and
-        mod = "exec" and
-        optionsArg = -2 and
-        cmdArg = 0
+        (
+          mod = "npm:exec" and
+          optionsArg = -2 and
+          cmdArg = 0
+          or
+          mod = "npm:remote-exec" and
+          cmdArg = 1 and
+          optionsArg = -1
+        )
       ) and
-      callee = DataFlow::moduleImport(mod)
+      callee = LocalApiGraph::moduleImport(mod)
     |
-      this = callee.getACall()
+      this = callee.getResult().getAUse()
     )
   }
 
