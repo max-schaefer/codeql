@@ -424,9 +424,10 @@ module LocalApiGraph {
         succ = MkUseNode(def2Use(nd, lbl))
       )
       or
-      exists(DataFlow::Node nd |
-        pred = MkDefNode(nd) and
-        succ = MkUseNode(nd) and
+      exists(DataFlow::Node def, DataFlow::Node use |
+        pred = MkDefNode(def) and
+        succ = MkUseNode(use) and
+        trackUseNode(use).flowsTo(def) and
         lbl = ""
       )
       or
