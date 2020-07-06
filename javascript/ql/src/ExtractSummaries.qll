@@ -7,6 +7,34 @@
 private import javascript
 private import ApiGraphs
 
+private predicate mayEscapeToClient(LocalApiGraph::DefNode nd) {
+  nd = LocalApiGraph::moduleDefinition(_)
+  or
+  exists(LocalApiGraph::Node base | mayComeFromClient(base) |
+    nd = base.getAParameter() or
+    nd = base.getInstance()
+  )
+  or
+  exists(LocalApiGraph::Node base | mayEscapeToClient(base) |
+    nd = base.getAMember() or
+    nd = base.getResult() or
+    nd = base.getPromised()
+  )
+}
+
+private predicate mayComeFromClient(LocalApiGraph::UseNode nd) {
+  exists(LocalApiGraph::Node base | mayEscapeToClient(base) |
+    nd = base.getAParameter() or
+    nd = base.getInstance()
+  )
+  or
+  exists(LocalApiGraph::Node base | mayComeFromClient(base) |
+    nd = base.getAMember() or
+    nd = base.getResult() or
+    nd = base.getPromised()
+  )
+}
+
 private class SinkSummarizingConfig extends DataFlow::Configuration {
   DataFlow::Configuration base;
 
@@ -17,7 +45,7 @@ private class SinkSummarizingConfig extends DataFlow::Configuration {
   DataFlow::Configuration getBase() { result = base }
 
   override predicate isSource(DataFlow::Node nd, DataFlow::FlowLabel lbl) {
-    nd = LocalApiGraph::moduleDefinition(_).getASuccessor*().getAUse() and
+    nd = any(LocalApiGraph::Node n | mayComeFromClient(n)).getAUse() and
     lbl = any(DataFlow::FlowLabel l)
   }
 
@@ -58,7 +86,7 @@ private class SourceSummarizingConfig extends DataFlow::Configuration {
   }
 
   override predicate isSink(DataFlow::Node nd, DataFlow::FlowLabel lbl) {
-    nd = LocalApiGraph::moduleDefinition(_).getASuccessor*().getADefinition() and
+    nd = any(LocalApiGraph::Node n | mayEscapeToClient(n)).getADefinition() and
     lbl = any(DataFlow::FlowLabel l)
   }
 

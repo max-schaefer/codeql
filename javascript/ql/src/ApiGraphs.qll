@@ -66,6 +66,9 @@ module ApiGraph {
 
     /** Gets the `return` edge label. */
     string return() { result = "return" }
+
+    /** Gets the `promise` edge label connecting a promise to its contained value. */
+    string promise() { result = "promise" }
   }
 }
 
@@ -173,13 +176,15 @@ module LocalApiGraph {
 
     /** Holds if a module with the given `spec` exports `rhs` under the name `prop`. */
     private predicate exports(string spec, string prop, DataFlow::Node rhs) {
-      exists(AnalyzedModule m | m = importableModule(spec) |
-        exists(AnalyzedPropertyWrite apw | apw.writes(m.getAnExportsValue(), prop, rhs))
+      exists(AnalyzedModule m, DefiniteAbstractValue exp |
+        m = importableModule(spec) and exp = m.getAnExportsValue()
+      |
+        exists(AnalyzedPropertyWrite apw | apw.writes(exp, prop, rhs))
         or
         // mostly overlaps with the above, but handles cases where the exported property isn't read
         // anywhere in the code base
         exists(DataFlow::PropWrite pw, DataFlow::Node exports |
-          exports.analyze().getAValue() = m.getAnExportsValue() and
+          exports.analyze().getAValue() = exp and
           pw.writes(exports, prop, rhs)
         )
       )
@@ -192,7 +197,7 @@ module LocalApiGraph {
     newtype TNode =
       MkRootNode() or
       MkSyntheticExportNode(string modSpec) { exports(modSpec, _, _) } or
-      MkSyntheticInstanceNode(DataFlow::ClassNode cls) or
+      MkSyntheticInstanceNode(DataFlow::ClassNode cls) { cls = trackDefNode(_) } or
       MkDefNode(DataFlow::Node nd) {
         not nd.getTopLevel().isExterns() and
         (
@@ -200,7 +205,8 @@ module LocalApiGraph {
           nd = def2Def(_, _) or
           nd = instance2Def(_, _) or
           nd = export2Def(_, _) or
-          nd = use2Def(_, _)
+          nd = use2Def(_, _) or
+          nd = any(DataFlow::FunctionNode f | exists(MkAsyncFuncResult(f))).getAReturn()
         )
       } or
       MkUseNode(DataFlow::SourceNode nd) {
@@ -209,7 +215,10 @@ module LocalApiGraph {
           nd = root2Use(_) or
           nd = use2Use(_, _) or
           nd = def2Use(_, _) or
-          nd = getANodeWithType(_)
+          nd = getANodeWithType(_) or
+          nd
+              .(AnalyzedPropertyRead)
+              .reads(importableModule(_).(NodeModule).getAModuleExportsValue(), _)
         )
       } or
       MkForwardedNode(RemoteApiGraph::Node nd) {
@@ -221,7 +230,10 @@ module LocalApiGraph {
         exists(MkForwardedNode(nd.getAPredecessor(_)))
       } or
       MkTypeScriptDefNode(CanonicalName n) { isDefined(n) } or
-      MkTypeScriptUseNode(CanonicalName n) { isUsed(n) }
+      MkTypeScriptUseNode(CanonicalName n) { isUsed(n) } or
+      MkAsyncFuncResult(DataFlow::FunctionNode f) {
+        f = trackDefNode(_) and f.getFunction().isAsync()
+      }
 
     private predicate isUsed(CanonicalName n) {
       exists(n.(TypeName).getAnAccess()) or
@@ -279,6 +291,12 @@ module LocalApiGraph {
       or
       lbl = Label::return() and
       result = trackUseNode(pred).getAnInvocation()
+      or
+      lbl = Label::promise() and
+      trackUseNode(pred).flowsToExpr(result.asExpr().(AwaitExpr).getOperand())
+      or
+      lbl = Label::promise() and
+      result = trackUseNode(pred).getAMethodCall("then").getCallback(0).getParameter(0)
     }
 
     private DataFlow::SourceNode trackDefNode(DataFlow::Node nd, DataFlow::TypeBackTracker t) {
@@ -305,11 +323,28 @@ module LocalApiGraph {
           lbl = Label::unknownMember()
         )
         or
-        lbl = Label::return() and
-        result = predOrigin.(DataFlow::FunctionNode).getAReturn()
+        exists(DataFlow::FunctionNode fn | fn = predOrigin |
+          not fn.getFunction().isAsync() and
+          lbl = Label::return() and
+          result = fn.getAReturn()
+        )
+        or
+        lbl = Label::promise() and
+        result = predOrigin.(PromiseDefinition).getResolveParameter().getACall().getArgument(0)
+        or
+        lbl = Label::promise() and
+        result = predOrigin.(PromiseCreationCall).getValue() and
+        not predOrigin instanceof PromiseAllCreation
+        or
+        lbl = Label::promise() and
+        exists(DataFlow::MethodCallNode m | m = predOrigin |
+          m.getMethodName() = "then" and
+          result = m.getCallback([0 .. 1]).getAReturn()
+        )
       )
       or
       exists(DataFlow::ClassNode cls, string name |
+        exists(MkDefNode(pred)) and
         cls.getAnInstanceReference().flowsTo(pred) and
         lbl = Label::member(name) and
         result = cls.getInstanceMethod(name)
@@ -318,12 +353,13 @@ module LocalApiGraph {
 
     private DataFlow::Node instance2Def(DataFlow::ClassNode cls, string lbl) {
       exists(string name |
+        exists(MkSyntheticInstanceNode(cls)) and
         lbl = Label::member(name) and
         result = cls.getInstanceMethod(name)
       )
     }
 
-    private DataFlow::Node def2Instance(DataFlow::Node base, string lbl) {
+    private DataFlow::ClassNode def2Instance(DataFlow::Node base, string lbl) {
       lbl = Label::instance() and
       result = trackDefNode(base)
     }
@@ -335,8 +371,8 @@ module LocalApiGraph {
       )
     }
 
-    private DataFlow::Node use2Def(DataFlow::SourceNode fn, string lbl) {
-      exists(DataFlow::InvokeNode invk | invk = trackUseNode(fn).getAnInvocation() |
+    private DataFlow::Node use2Def(DataFlow::SourceNode nd, string lbl) {
+      exists(DataFlow::InvokeNode invk | invk = trackUseNode(nd).getAnInvocation() |
         exists(int i |
           lbl = Label::parameter(i) and
           result = invk.getArgument(i)
@@ -344,6 +380,15 @@ module LocalApiGraph {
         or
         lbl = Label::receiver() and
         result = invk.(DataFlow::CallNode).getReceiver()
+      )
+      or
+      exists(DataFlow::PropWrite pw |
+        pw = trackUseNode(nd).getAPropertyWrite() and result = pw.getRhs()
+      |
+        lbl = Label::member(pw.getPropertyName())
+        or
+        not exists(pw.getPropertyName()) and
+        lbl = Label::unknownMember()
       )
     }
 
@@ -358,7 +403,13 @@ module LocalApiGraph {
         result = fn.getReceiver()
       )
       or
+      exists(DataFlow::ClassNode cls, int i | cls = trackDefNode(nd) |
+        lbl = Label::parameter(i) and
+        result = cls.getConstructor().getParameter(i)
+      )
+      or
       exists(DataFlow::ClassNode cls |
+        exists(MkDefNode(nd)) and
         lbl = Label::instance() and
         cls.getAClassReference().flowsTo(nd) and
         result = cls.getAReceiverNode()
@@ -404,9 +455,15 @@ module LocalApiGraph {
         succ = MkDefNode(instance2Def(ctor, lbl))
       )
       or
-      exists(string spec |
-        pred = MkSyntheticExportNode(spec) and
+      exists(string spec | pred = MkSyntheticExportNode(spec) |
         succ = MkDefNode(export2Def(spec, lbl))
+        or
+        exists(NodeModule m, AnalyzedPropertyRead pr, string prop |
+          m = importableModule(spec) and
+          pr.reads(m.getAModuleExportsValue(), prop) and
+          lbl = Label::member(prop) and
+          succ = MkUseNode(pr)
+        )
       )
       or
       exists(DataFlow::Node base |
@@ -462,11 +519,26 @@ module LocalApiGraph {
         lbl = Label::instance() and
         succ = MkUseNode(getANodeWithType(tn))
       )
+      or
+      exists(DataFlow::Node nd, DataFlow::FunctionNode f |
+        pred = MkDefNode(nd) and
+        f = trackDefNode(nd) and
+        lbl = Label::return() and
+        succ = MkAsyncFuncResult(f)
+      )
+      or
+      exists(DataFlow::FunctionNode f |
+        pred = MkAsyncFuncResult(f) and
+        lbl = Label::promise() and
+        succ = MkDefNode(f.getAReturn())
+      )
     }
 
-    /** Holds if there is an edge from `pred` to `succ` in the API graph. */
+    /** Holds if there is a non-alias edge from `pred` to `succ` in the API graph. */
     cached
-    predicate edge(TNode pred, TNode succ) { edge(pred, _, succ) }
+    predicate edge(TNode pred, TNode succ) {
+      exists(string lbl | edge(pred, lbl, succ) and lbl != "")
+    }
 
     /** Gets the shortest distance from the root node to `nd` in the API graph. */
     cached
@@ -477,8 +549,6 @@ module LocalApiGraph {
    * An API node, that is, an abstract representation of an API component.
    */
   class Node extends Impl::TNode {
-    Node() { Impl::edge*(Impl::MkRootNode(), this) }
-
     predicate hasLocationInfo(string path, int startline, int startcol, int endline, int endcol) {
       (
         this instanceof Impl::MkRootNode or
@@ -501,6 +571,12 @@ module LocalApiGraph {
       or
       exists(DataFlow::Node nd | this = Impl::MkDefNode(nd) or this = Impl::MkUseNode(nd) |
         nd.hasLocationInfo(path, startline, startcol, endline, endcol)
+      )
+      or
+      exists(DataFlow::FunctionNode f | this = Impl::MkAsyncFuncResult(f) |
+        startline = endline and
+        startcol = endcol and
+        f.hasLocationInfo(path, _, _, endline, endcol)
       )
     }
 
@@ -550,7 +626,11 @@ module LocalApiGraph {
 
     Node getReceiver() { result = getASuccessor(Label::receiver()) }
 
+    Node getAParameter() { result = getParameter(_) or result = getReceiver() }
+
     Node getResult() { result = getASuccessor(Label::return()) }
+
+    Node getPromised() { result = getASuccessor(Label::promise()) }
 
     private string getAPath(int length) {
       this instanceof Impl::MkRootNode and
@@ -559,16 +639,13 @@ module LocalApiGraph {
       or
       exists(Node pred, string lbl, string predpath |
         Impl::edge(pred, lbl, this) and
-        predpath = pred.getAPath(length - 1)
-      |
-        if lbl = ""
-        then result = predpath
-        else
-          exists(string space | if length = 1 then space = "" else space = " " |
-            result = "(" + lbl + space + predpath + ")" and
-            // avoid producing strings longer than 1MB
-            result.length() < 1000 * 1000
-          )
+        lbl != "" and
+        predpath = pred.getAPath(length - 1) and
+        exists(string space | if length = 1 then space = "" else space = " " |
+          result = "(" + lbl + space + predpath + ")" and
+          // avoid producing strings longer than 1MB
+          result.length() < 1000 * 1000
+        )
       ) and
       length in [1 .. Impl::distanceFromRoot(this)]
     }
@@ -619,7 +696,8 @@ module LocalApiGraph {
       this instanceof Impl::MkSyntheticExportNode or
       this instanceof Impl::MkSyntheticInstanceNode or
       this = Impl::MkForwardedNode(any(RemoteApiGraph::DefNode remdef)) or
-      this instanceof Impl::MkTypeScriptDefNode
+      this instanceof Impl::MkTypeScriptDefNode or
+      this instanceof Impl::MkAsyncFuncResult
     }
 
     override int getKind() { result = 1 }
@@ -671,12 +749,28 @@ module RemoteApiGraph {
     )
   }
 
+  private predicate edge(string pred, string succ) { edge(pred, succ, _) }
+
   private newtype TNode =
     MkRootNode(string path) { node(path, 0) } or
     MkDefNode(string path) { node(path, 1) } or
     MkUseNode(string path) { node(path, 2) }
 
+  private predicate isRelevant(string path) {
+    exists(ExternalData e |
+      e.getField(0).matches("%Summary") and
+      edge*(path, e.getField(_))
+    )
+  }
+
   class Node extends TNode {
+    string path;
+
+    Node() {
+      (this = MkRootNode(path) or this = MkDefNode(path) or this = MkUseNode(path)) and
+      isRelevant(path)
+    }
+
     Node getAPredecessor(string lbl) {
       edge(result.getPath(), this.getPath(), lbl) and
       lbl != ""
@@ -690,31 +784,48 @@ module RemoteApiGraph {
      * Gets a string representation of the lexicographically least among all shortest paths
      * from the root to this node.
      */
-    string getPath() {
-      this = MkRootNode(result) or this = MkDefNode(result) or this = MkUseNode(result)
+    string getPath() { result = path }
+
+    pragma[noinline]
+    LocalApiGraph::Node getAPredecessorLocal(string lbl) {
+      result = getAPredecessor(lbl).getLocalNodeRec()
+    }
+
+    private LocalApiGraph::Node getLocalNodeRec() {
+      this = MkRootNode(_) and
+      result = LocalApiGraph::root()
+      or
+      exists(string lbl | result = getAPredecessorLocal(lbl).getASuccessor(lbl))
     }
 
     LocalApiGraph::Node getLocalNode() {
-      exists(string lbl | result = getAPredecessor(lbl).getLocalNode().getASuccessor(lbl))
+      result = getLocalNodeRec()
+      or
+      // we allow a certain amount of imprecise matching: if `rem` matches `loc`
+      // precisely, then we also want to match `rem.p` against `loc[e]`, and potentially
+      // one step more (e.g., `rem.p()` matches `loc[e]()`); matching more than one
+      // step is too imprecise
+      exists(RemoteApiGraph::Node rem, LocalApiGraph::Node loc |
+        rem.getAPredecessorLocal(Label::member(_)).getASuccessor(Label::unknownMember()) = loc
+      |
+        this = rem and result = loc
+        or
+        exists(string lbl |
+          this = rem.getASuccessor(lbl) and
+          result = loc.getASuccessor(lbl)
+        )
+      )
     }
 
     string toString() { result = getPath() }
   }
 
   class RootNode extends Node, MkRootNode {
-    override LocalApiGraph::RootNode getLocalNode() { any() }
+    override LocalApiGraph::RootNode getLocalNode() { result = Node.super.getLocalNode() }
   }
 
   class DefNode extends Node, MkDefNode {
-    override LocalApiGraph::UseNode getLocalNode() {
-      result = Node.super.getLocalNode()
-      or
-      // allow imprecise matching: a (local) property read of an unknown member matches with
-      // any (remote) property write of a property on a matching base
-      // we don't do the converse, since it seems likely to introduce many spurious matches
-      result =
-        getAPredecessor(Label::member(_)).getLocalNode().getASuccessor(Label::unknownMember())
-    }
+    override LocalApiGraph::UseNode getLocalNode() { result = Node.super.getLocalNode() }
   }
 
   class UseNode extends Node, MkUseNode {
