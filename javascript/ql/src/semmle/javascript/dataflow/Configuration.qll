@@ -1698,6 +1698,8 @@ module PathGraph {
     not succ = initialMidNode(pred) and
     not pred = finalMidNode(succ)
   }
+
+  import ExtractSummaries
 }
 
 /**

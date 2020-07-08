@@ -10,3 +10,4 @@
  */
 
 import javascript
+private import ImportSummaries
