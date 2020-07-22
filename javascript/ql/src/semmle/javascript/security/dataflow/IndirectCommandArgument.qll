@@ -83,10 +83,18 @@ private DataFlow::SourceNode argumentList(SystemCommandExecution sys) {
  * ```
  */
 predicate isIndirectCommandArgument(DataFlow::Node source, SystemCommandExecution sys) {
-  exists(DataFlow::ArrayCreationNode args, DataFlow::Node shell, string dashC |
+  exists(
+    DataFlow::ArrayCreationNode args, DataFlow::Node shell, string dashC, DataFlow::PropWrite pw
+  |
     shellCmd(shell.asExpr(), dashC) and
     shell = commandArgument(sys) and
-    args.getAPropertyWrite().getRhs().mayHaveStringValue(dashC) and
+    pw = args.getAPropertyWrite() and
+    pw.getRhs().mayHaveStringValue(dashC) and
+    // rule out simple case where we can tell that the name of the command to be run is fixed
+    not exists(int i |
+      args.getElement(i) = pw.getRhs() and
+      args.getElement(i + 1).mayHaveStringValue(_)
+    ) and
     args = argumentList(sys) and
     (
       source = argumentList(sys)
