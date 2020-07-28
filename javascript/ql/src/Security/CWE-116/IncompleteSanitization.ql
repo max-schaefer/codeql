@@ -17,7 +17,7 @@ import javascript
 /**
  * Gets a character that is commonly used as a meta-character.
  */
-string metachar() { result = "'\"\\&<>\n\r\t*|{}[]%$".charAt(_) }
+string metachar() { result = "'\"\\&<>\n\r\t*|{}[]%$^".charAt(_) }
 
 /** Gets a string matched by `e` in a `replace` call. */
 string getAMatchedString(DataFlow::Node e) {
@@ -46,34 +46,38 @@ predicate isSimpleCharacterClass(RegExpCharacterClass t) {
 /** Holds if `t` is an alternation of simple terms. */
 predicate isSimpleAlt(RegExpAlt t) { forall(RegExpTerm ch | ch = t.getAChild() | isSimple(ch)) }
 
+predicate isEscapingCharacter(string esc) { esc = "\\" or esc = "^" }
+
 /**
  * Holds if `mce` is of the form `x.replace(re, new)`, where `re` is a global
- * regular expression and `new` prefixes the matched string with a backslash.
+ * regular expression and `new` prefixes the matched string with escaping character `esc`.
  */
-predicate isBackslashEscape(StringReplaceCall mce, DataFlow::RegExpLiteralNode re) {
+predicate isEscape(StringReplaceCall mce, DataFlow::RegExpLiteralNode re, string esc) {
   mce.isGlobal() and
   re = mce.getRegExp() and
+  isEscapingCharacter(esc) and
   (
     // replacement with `\$&`, `\$1` or similar
-    mce.getRawReplacement().getStringValue().regexpMatch("\\\\\\$(&|\\d)")
+    mce.getRawReplacement().getStringValue().regexpMatch("\\Q" + esc + "\\E" + "\\$(&|\\d)")
     or
     // replacement of `c` with `\c`
-    exists(string c | mce.replaces(c, "\\" + c))
+    exists(string c | mce.replaces(c, esc + c))
   )
 }
 
 /**
- * Holds if data flowing into `nd` has no un-escaped backslashes.
+ * Holds if data flowing into `nd` has no un-escaped escaping characters `esc`.
  */
-predicate allBackslashesEscaped(DataFlow::Node nd) {
+predicate allEscapingCharactersEscaped(DataFlow::Node nd, string esc) {
   // `JSON.stringify` escapes backslashes
-  nd = DataFlow::globalVarRef("JSON").getAMemberCall("stringify")
+  nd = DataFlow::globalVarRef("JSON").getAMemberCall("stringify") and
+  esc = "\\"
   or
-  // check whether `nd` itself escapes backslashes
-  exists(DataFlow::RegExpLiteralNode rel | isBackslashEscape(nd, rel) |
-    // if it's a complex regexp, we conservatively assume that it probably escapes backslashes
+  // check whether `nd` itself escapes the escaping character
+  exists(DataFlow::RegExpLiteralNode rel | isEscape(nd, rel, esc) |
+    // if it's a complex regexp, we conservatively assume that it probably does the right thing
     not isSimple(rel.getRoot()) or
-    getAMatchedString(rel) = "\\"
+    getAMatchedString(rel) = esc
   )
   or
   // flow through string methods
@@ -86,15 +90,16 @@ predicate allBackslashesEscaped(DataFlow::Node nd) {
     m = "toUpperCase" or
     m = "trim"
   |
-    mc = nd and m = mc.getMethodName() and allBackslashesEscaped(mc.getReceiver())
+    mc = nd and m = mc.getMethodName() and allEscapingCharactersEscaped(mc.getReceiver(), esc)
   )
   or
   // general data flow
-  allBackslashesEscaped(nd.getAPredecessor())
+  allEscapingCharactersEscaped(nd.getAPredecessor(), esc)
 }
 
 /**
- * Holds if `repl` looks like a call to "String.prototype.replace" that deliberately removes the first occurrence of `str`.
+ * Holds if `repl` looks like a call to "String.prototype.replace" that deliberately removes
+ * the first occurrence of `str`.
  */
 predicate removesFirstOccurence(StringReplaceCall repl, string str) {
   not exists(repl.getRegExp()) and repl.replaces(str, "")
@@ -173,10 +178,10 @@ where
     // don't flag replacements of certain characters with whitespace
     not whitelistedRemoval(repl)
     or
-    exists(DataFlow::RegExpLiteralNode rel |
-      isBackslashEscape(repl, rel) and
-      not allBackslashesEscaped(repl) and
-      msg = "This does not escape backslash characters in the input."
+    exists(DataFlow::RegExpLiteralNode rel, string esc |
+      isEscape(repl, rel, esc) and
+      not allEscapingCharactersEscaped(repl, esc) and
+      msg = "This does not escape " + esc + " characters in the input."
     )
   )
 select repl.getCalleeNode(), msg
