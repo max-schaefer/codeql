@@ -759,8 +759,10 @@ module RemoteApiGraph {
   private predicate isRelevant(string path) {
     exists(ExternalData e |
       e.getField(0).matches("%Summary") and
-      edge*(path, e.getField(_))
+      path = e.getField(_)
     )
+    or
+    edge(path, any(string path2 | isRelevant(path2)))
   }
 
   class Node extends TNode {
@@ -786,38 +788,48 @@ module RemoteApiGraph {
      */
     string getPath() { result = path }
 
-    pragma[noinline]
-    LocalApiGraph::Node getAPredecessorLocal(string lbl) {
-      result = getAPredecessor(lbl).getLocalNodeRec()
-    }
-
-    private LocalApiGraph::Node getLocalNodeRec() {
-      this = MkRootNode(_) and
-      result = LocalApiGraph::root()
-      or
-      exists(string lbl | result = getAPredecessorLocal(lbl).getASuccessor(lbl))
-    }
-
+    cached
     LocalApiGraph::Node getLocalNode() {
-      result = getLocalNodeRec()
+      match(this, result)
       or
       // we allow a certain amount of imprecise matching: if `rem` matches `loc`
       // precisely, then we also want to match `rem.p` against `loc[e]`, and potentially
       // one step more (e.g., `rem.p()` matches `loc[e]()`); matching more than one
       // step is too imprecise
-      exists(RemoteApiGraph::Node rem, LocalApiGraph::Node loc |
-        rem.getAPredecessorLocal(Label::member(_)).getASuccessor(Label::unknownMember()) = loc
-      |
-        this = rem and result = loc
-        or
-        exists(string lbl |
-          this = rem.getASuccessor(lbl) and
-          result = loc.getASuccessor(lbl)
-        )
-      )
+      impreciseMatch(this, result)
+      or
+      exists(string lbl | result = getImpreciseMatchForPredecessor(lbl, this).getASuccessor(lbl))
     }
 
     string toString() { result = getPath() }
+  }
+
+  pragma[noinline]
+  pragma[nomagic]
+  private LocalApiGraph::Node getAPredecessorLocal(RemoteApiGraph::Node rem, string lbl) {
+    match(rem.getAPredecessor(lbl), result)
+  }
+
+  private predicate match(RemoteApiGraph::Node rem, LocalApiGraph::Node loc) {
+    rem = MkRootNode(_) and
+    loc = LocalApiGraph::root()
+    or
+    exists(string lbl | loc = getAPredecessorLocal(rem, lbl).getASuccessor(lbl))
+  }
+
+  pragma[noinline]
+  private LocalApiGraph::Node getAMemberPredecessorLocal(RemoteApiGraph::Node rem) {
+    result = getAPredecessorLocal(rem, Label::member(_))
+  }
+
+  pragma[noinline]
+  private predicate impreciseMatch(RemoteApiGraph::Node rem, LocalApiGraph::Node loc) {
+    getAMemberPredecessorLocal(rem).getUnknownMember() = loc
+  }
+
+  pragma[noinline]
+  private LocalApiGraph::Node getImpreciseMatchForPredecessor(string lbl, RemoteApiGraph::Node rem) {
+    impreciseMatch(rem.getAPredecessor(lbl), result)
   }
 
   class RootNode extends Node, MkRootNode {
