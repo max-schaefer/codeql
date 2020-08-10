@@ -22,7 +22,11 @@ module PropagationGraph {
     MkNode(DataFlow::Node nd) {
       (
         nd instanceof DataFlow::InvokeNode and
-        taintStep(nd, _)
+        (
+          taintStep(nd, _)
+          or
+          guard(nd, _)
+        )
         or
         nd instanceof DataFlow::PropRead and
         taintStep(nd, _)
@@ -39,6 +43,21 @@ module PropagationGraph {
       ) and
       isRelevant(nd)
     }
+
+  /**
+   * Holds if `pred` is a call of the form `f(..., x, ...)` and `succ` is a subsequent
+   * use of `x` where the result of the call is either known to be true or known to be
+   * false.
+   */
+  private predicate guard(DataFlow::CallNode pred, DataFlow::Node succ) {
+    exists(ConditionGuardNode g, SsaVariable v |
+      g.getTest() = pred.asExpr() and
+      pred.getAnArgument().asExpr() = v.getAUse() and
+      succ.asExpr() = v.getAUse() and
+      exists(MkNode(succ)) and
+      g.dominates(succ.getBasicBlock())
+    )
+  }
 
   /**
    * A propagation-graph node, or "event" in Merlin terminology (cf Section 5.1 of
@@ -158,6 +177,17 @@ module PropagationGraph {
     or
     pointsTo(_, pred.asDataFlowNode()) = pointsTo(_, succ.asDataFlowNode()) and
     pred != succ
+    or
+    // edge capturing indirect flow; for example, in the code snippet
+    // `if(path.isAbsolute(p)) use(p)` this adds an edge between the call to `isAbsolute`
+    // and the argument `p` to `use`
+    guard(pred.asDataFlowNode(), succ.asDataFlowNode())
+  }
+
+  pragma[noinline]
+  private predicate callInFile(DataFlow::CallNode call, DataFlow::FunctionNode callee, File f) {
+    call.getFile() = f and
+    callee.getFunction() = call.getACallee(_)
   }
 
   /**
@@ -167,8 +197,7 @@ module PropagationGraph {
    * not considered.
    */
   private predicate calls(DataFlow::CallNode call, DataFlow::FunctionNode callee) {
-    callee = call.getACallee(_).flow() and
-    callee.getFile() = call.getFile()
+    callInFile(call, callee, callee.getFile())
   }
 
   /**
