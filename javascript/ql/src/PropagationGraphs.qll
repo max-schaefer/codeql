@@ -106,6 +106,11 @@ module PropagationGraph {
       count(Node n | n.candidateRep() = result) >= 5
     }
 
+    string preciseRep() {
+      result = rep() and
+      not result.matches(genericMemberPattern())
+    }
+
     /**
      * Holds if there is no candidate representation for this node.
      *
@@ -155,6 +160,13 @@ module PropagationGraph {
     }
 
     DataFlow::Node asDataFlowNode() { result = nd }
+  }
+
+  private string genericMemberPattern() {
+    exists(ExternalType tp |
+      tp.getName() in ["Array", "Function", "Object", "Promise", "String"] and
+      result = "%(member " + tp.getAMember().getName() + " *)%"
+    )
   }
 
   /**
