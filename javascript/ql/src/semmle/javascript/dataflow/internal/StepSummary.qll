@@ -174,5 +174,13 @@ module StepSummary {
         succ = fun.getAnInvocation()
       )
     )
+    or
+    // step from `module.exports` in some module `m` to `require(m)`
+    exists(NodeModule m, DataFlow::SourceNode mod |
+      mod = DataFlow::ssaDefinitionNode(SSA::implicitInit(m.getModuleVariable())) and
+      pred = mod.getAPropertyRead("exports") and
+      succ.asExpr().(Require).getImportedModule() = m and
+      summary = LevelStep()
+    )
   }
 }
