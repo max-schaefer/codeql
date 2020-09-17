@@ -585,23 +585,20 @@ module API {
           PromiseFlow::loadStep(pred, ref, Promises::valueProp())
         )
         or
-        exists(DataFlow::Node def, DataFlow::FunctionNode fn |
-          rhs(base, def) and fn = trackDefNode(def)
+        exists(DataFlow::Node def, DataFlow::SourceNode pred |
+          rhs(base, def) and pred = trackDefNode(def)
         |
-          exists(int i |
-            lbl = Label::parameter(i) and
-            ref = fn.getParameter(i)
+          exists(int i | lbl = Label::parameter(i) |
+            ref = pred.(DataFlow::FunctionNode).getParameter(i)
+            or
+            ref = pred.(DataFlow::ClassNode).getConstructor().getParameter(i)
           )
           or
           lbl = Label::receiver() and
-          ref = fn.getReceiver()
-        )
-        or
-        exists(DataFlow::Node def, DataFlow::ClassNode cls, int i |
-          rhs(base, def) and cls = trackDefNode(def)
-        |
-          lbl = Label::parameter(i) and
-          ref = cls.getConstructor().getParameter(i)
+          ref = pred.(DataFlow::FunctionNode).getReceiver()
+          or
+          lbl = Label::memberFromRef(ref) and
+          ref = pred.getAPropertyRead()
         )
         or
         exists(TypeName tn |
