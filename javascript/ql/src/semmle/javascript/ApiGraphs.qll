@@ -679,10 +679,29 @@ module API {
       )
     }
 
+    /**
+     * Holds if `exprt` is a use of `exports` or `module.exports` in a module `m`,
+     * and `imprt` is a an import of `m`.
+     */
+    private predicate exportImportStep(DataFlow::Node exprt, DataFlow::Node imprt) {
+      exists(Import imp |
+        exprt.(ExportsAsSourceNode).getModule() = imp.getImportedModule()
+        or
+        exists(ModuleAsSourceNode mod |
+          mod.getModule() = imp.getImportedModule() and
+          exprt = mod.(DataFlow::SourceNode).getAPropertyRead("exports")
+        )
+      |
+        imprt = imp.getImportedModuleNode()
+      )
+    }
+
     private DataFlow::SourceNode trackUseNode(DataFlow::SourceNode nd, DataFlow::TypeTracker t) {
       t.start() and
       use(_, nd) and
       result = nd
+      or
+      exportImportStep(trackUseNode(nd, t.continue()), result)
       or
       exists(DataFlow::TypeTracker t2 | result = trackUseNode(nd, t2).track(t2, t))
     }
@@ -700,15 +719,7 @@ module API {
       rhs(_, nd) and
       result = nd.getALocalSource()
       or
-      // additional backwards step from `require('m')` to `exports` or `module.exports` in m
-      exists(Import imp | imp.getImportedModuleNode() = trackDefNode(nd, t.continue()) |
-        result.(ExportsAsSourceNode).getModule() = imp.getImportedModule()
-        or
-        exists(ModuleAsSourceNode mod |
-          mod.getModule() = imp.getImportedModule() and
-          result = mod.(DataFlow::SourceNode).getAPropertyRead("exports")
-        )
-      )
+      exportImportStep(result, trackDefNode(nd, t.continue()))
       or
       exists(DataFlow::TypeBackTracker t2 | result = trackDefNode(nd, t2).backtrack(t2, t))
     }
