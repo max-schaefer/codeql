@@ -481,6 +481,13 @@ module API {
             rhs = m.getAnExportedValue(prop)
           )
           or
+          // another special case: from `new C` to an instance member of `C`
+          exists(DataFlow::ClassNode cn, string name |
+            pred = cn.getAnInstanceReference() and
+            lbl = Label::member(name) and
+            rhs = cn.getInstanceMethod(name)
+          )
+          or
           exists(DataFlow::FunctionNode fn | fn = pred |
             not fn.getFunction().isAsync() and
             lbl = Label::return() and
