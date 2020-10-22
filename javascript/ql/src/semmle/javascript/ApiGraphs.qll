@@ -197,7 +197,11 @@ module API {
      * In other words, the value of a use of `that` may flow into the right-hand side of a
      * definition of this node.
      */
-    predicate refersTo(Node that) { this.getARhs() = that.getAUse() }
+    predicate refersTo(Node that) {
+      this.getARhs() = that.getAUse()
+      or
+      this.(ExternalNode).getRepresentation().refersTo(that)
+    }
 
     /**
      * Gets the data-flow node that gives rise to this node, if any.
@@ -274,6 +278,19 @@ module API {
     override string toString() { result = "use " + getPath() }
   }
 
+  /**
+   * An additional API-graph node that is not constructed from the data-flow graph
+   * but specified via an `ExternalNodeRepresentation`.
+   */
+  class ExternalNode extends Node, Impl::TExternalNode {
+    ExternalNodeRepresentation repr;
+
+    ExternalNode() { this = Impl::mkExternalNode(repr) }
+
+    /** Gets the string representation of this node. */
+    ExternalNodeRepresentation getRepresentation() { result = repr }
+  }
+
   /** Gets the root node. */
   Root root() { any() }
 
@@ -285,6 +302,9 @@ module API {
 
   /** Gets a node corresponding to an export of module `m`. */
   Node moduleExport(string m) { result = Impl::MkModuleDef(m).(Node).getMember("exports") }
+
+  /** Gets an external node with the given representation. */
+  ExternalNode externalNode(ExternalNodeRepresentation repr) { result = Impl::mkExternalNode(repr) }
 
   /** Provides helper predicates for accessing API-graph nodes. */
   module Node {
@@ -312,6 +332,30 @@ module API {
 
     /** Gets a data-flow node that defines this entry point. */
     abstract DataFlow::Node getARhs();
+  }
+
+  /**
+   * A string representing a custom node to be added to the API graph.
+   *
+   * Note that this is slightly different from API entry points: API entry points give rise to
+   * additional edges from the root node to def/use nodes wrapping data-flow nodes, while external
+   * nodes are completely separate from the data-flow graph.
+   */
+  abstract class ExternalNodeRepresentation extends string {
+    bindingset[this]
+    ExternalNodeRepresentation() { any() }
+
+    /** Has result `true` if this is a use node, `false` if it is a def node. */
+    abstract boolean isUse();
+
+    /** Holds if this node refers to the value of `that`. */
+    predicate refersTo(Node that) { none() }
+
+    /** Gets a predecessor of this node along an edge labeled `lbl`. */
+    Node getAPredecessor(string lbl) { none() }
+
+    /** Gets a successor of this node along an edge labeled `lbl`. */
+    Node getASuccessor(string lbl) { none() }
   }
 
   /**
@@ -389,14 +433,19 @@ module API {
       MkCanonicalNameUse(CanonicalName n) {
         not n.isRoot() and
         isUsed(n)
-      }
+      } or
+      MkExternalUse(ExternalNodeRepresentation repr) { repr.isUse() = true } or
+      MkExternalDef(ExternalNodeRepresentation repr) { repr.isUse() = false }
 
     class TDef = MkModuleDef or TNonModuleDef;
 
     class TNonModuleDef =
-      MkModuleExport or MkClassInstance or MkAsyncFuncResult or MkDef or MkCanonicalNameDef;
+      MkModuleExport or MkClassInstance or MkAsyncFuncResult or MkDef or MkCanonicalNameDef or
+          MkExternalDef;
 
-    class TUse = MkModuleUse or MkModuleImport or MkUse or MkCanonicalNameUse;
+    class TUse = MkModuleUse or MkModuleImport or MkUse or MkCanonicalNameUse or MkExternalUse;
+
+    class TExternalNode = MkExternalUse or MkExternalDef;
 
     private predicate hasSemantics(DataFlow::Node nd) { not nd.getTopLevel().isExterns() }
 
@@ -445,6 +494,12 @@ module API {
       if cn.isModuleRoot()
       then result = MkModuleImport(cn.getExternalModuleName())
       else result = MkCanonicalNameUse(cn)
+    }
+
+    /** An API-graph node wrapping the given representation. */
+    cached
+    TApiNode mkExternalNode(ExternalNodeRepresentation repr) {
+      result = MkExternalUse(repr) or result = MkExternalDef(repr)
     }
 
     /**
@@ -788,6 +843,14 @@ module API {
         f = trackDefNode(nd) and
         lbl = Label::return() and
         succ = MkAsyncFuncResult(f)
+      )
+      or
+      exists(ExternalNodeRepresentation repr |
+        pred = mkExternalNode(repr) and
+        succ = repr.getASuccessor(lbl)
+        or
+        pred = repr.getAPredecessor(lbl) and
+        succ = mkExternalNode(repr)
       )
     }
 
