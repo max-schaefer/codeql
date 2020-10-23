@@ -4,7 +4,8 @@ using Microsoft.CodeAnalysis;
 
 namespace Semmle.Extraction.Entities
 {
-    public abstract class SourceLocation : Location {
+    public abstract class SourceLocation : Location
+    {
         protected SourceLocation(Context cx, Microsoft.CodeAnalysis.Location? init) : base(cx, init)
         {
         }
@@ -17,12 +18,13 @@ namespace Semmle.Extraction.Entities
         protected NonGeneratedSourceLocation(Context cx, Microsoft.CodeAnalysis.Location? init)
             : base(cx, init)
         {
-            if (init is null) throw new ArgumentException("Location may not be null", nameof(init));
+            if (init is null)
+                throw new ArgumentException("Location may not be null", nameof(init));
             Position = init.GetLineSpan();
             FileEntity = File.Create(Context, Position.Path);
         }
 
-        public new static Location Create(Context cx, Microsoft.CodeAnalysis.Location? loc) => SourceLocationFactory.Instance.CreateNullableEntity(cx, loc);
+        public static new Location Create(Context cx, Microsoft.CodeAnalysis.Location loc) => SourceLocationFactory.Instance.CreateEntity(cx, loc, loc);
 
         public override void Populate(TextWriter trapFile)
         {
@@ -54,11 +56,11 @@ namespace Semmle.Extraction.Entities
             trapFile.Write(Position.Span.End.Character);
         }
 
-        class SourceLocationFactory : ICachedEntityFactory<Microsoft.CodeAnalysis.Location?, SourceLocation>
+        private class SourceLocationFactory : ICachedEntityFactory<Microsoft.CodeAnalysis.Location, SourceLocation>
         {
-            public static readonly SourceLocationFactory Instance = new SourceLocationFactory();
+            public static SourceLocationFactory Instance { get; } = new SourceLocationFactory();
 
-            public SourceLocation Create(Context cx, Microsoft.CodeAnalysis.Location? init) => new NonGeneratedSourceLocation(cx, init);
+            public SourceLocation Create(Context cx, Microsoft.CodeAnalysis.Location init) => new NonGeneratedSourceLocation(cx, init);
         }
     }
 }

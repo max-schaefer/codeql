@@ -27,14 +27,16 @@ private module Cached {
   cached
   newtype TSplitKind =
     TInitializerSplitKind() or
+    TAssertionSplitKind() or
     TFinallySplitKind(int nestLevel) { nestLevel = FinallySplitting::nestLevel(_) } or
     TExceptionHandlerSplitKind() or
     TBooleanSplitKind(BooleanSplitting::BooleanSplitSubKind kind) { kind.startsSplit(_) } or
-    TLoopUnrollingSplitKind(LoopUnrollingSplitting::UnrollableLoopStmt loop)
+    TLoopSplitKind(LoopSplitting::AnalyzableLoopStmt loop)
 
   cached
   newtype TSplit =
     TInitializerSplit(Constructor c) { InitializerSplitting::constructorInitializes(c, _) } or
+    TAssertionSplit(AssertionSplitting::Assertion a, boolean success) { success = [true, false] } or
     TFinallySplit(FinallySplitting::FinallySplitType type, int nestLevel) {
       nestLevel = FinallySplitting::nestLevel(_)
     } or
@@ -43,7 +45,7 @@ private module Cached {
       kind.startsSplit(_) and
       (branch = true or branch = false)
     } or
-    TLoopUnrollingSplit(LoopUnrollingSplitting::UnrollableLoopStmt loop)
+    TLoopSplit(LoopSplitting::AnalyzableLoopStmt loop)
 
   cached
   newtype TSplits =
@@ -278,7 +280,7 @@ module InitializerSplitting {
    * A split for non-static member initializers belonging to a given non-static
    * constructor. For example, in
    *
-   * ```
+   * ```csharp
    * class C
    * {
    *     int Field1 = 0;
@@ -301,7 +303,7 @@ module InitializerSplitting {
    * on the two constructors. This is in order to generate CFGs for the two
    * constructors that mimic
    *
-   * ```
+   * ```csharp
    * public C()
    * {
    *     Field1 = 0;
@@ -312,7 +314,7 @@ module InitializerSplitting {
    *
    * and
    *
-   * ```
+   * ```csharp
    * public C()
    * {
    *     Field1 = 0;
@@ -381,6 +383,135 @@ module InitializerSplitting {
       succ =
         any(InitializedInstanceMember m | constructorInitializes(this.getConstructor(), m))
             .getAnInitializerDescendant()
+    }
+  }
+}
+
+module AssertionSplitting {
+  import semmle.code.csharp.commons.Assertions
+  private import semmle.code.csharp.ExprOrStmtParent
+
+  private ControlFlowElement getAnAssertionDescendant(Assertion a) {
+    result = a
+    or
+    result = getAnAssertionDescendant(a).getAChild()
+  }
+
+  /**
+   * A split for assertions. For example, in
+   *
+   * ```csharp
+   * void M(int i)
+   * {
+   *     Debug.Assert(i >= 0);
+   *     System.Console.WriteLine("i is positive")
+   * }
+   * ```
+   *
+   * we record whether `i >= 0` evaluates to `true` or `false`, and restrict the
+   * edges out of the assertion accordingly.
+   */
+  class AssertionSplitImpl extends SplitImpl, TAssertionSplit {
+    Assertion a;
+    boolean success;
+
+    AssertionSplitImpl() { this = TAssertionSplit(a, success) }
+
+    /** Gets the assertion. */
+    Assertion getAssertion() { result = a }
+
+    /** Holds if this split represents a successful assertion. */
+    predicate isSuccess() { success = true }
+
+    override string toString() {
+      success = true and result = "assertion success"
+      or
+      success = false and result = "assertion failure"
+    }
+  }
+
+  private class AssertionSplitKind extends SplitKind, TAssertionSplitKind {
+    override int getListOrder() { result = InitializerSplitting::getNextListOrder() }
+
+    override predicate isEnabled(ControlFlowElement cfe) { this.appliesTo(cfe) }
+
+    override string toString() { result = "Assertion" }
+  }
+
+  int getNextListOrder() { result = InitializerSplitting::getNextListOrder() + 1 }
+
+  private class AssertionSplitInternal extends SplitInternal, AssertionSplitImpl {
+    override AssertionSplitKind getKind() { any() }
+
+    override predicate hasEntry(ControlFlowElement pred, ControlFlowElement succ, Completion c) {
+      exists(AssertMethod m |
+        pred = last(a.getExpr(), c) and
+        succ = succ(pred, c) and
+        this.getAssertion() = a and
+        m = a.getAssertMethod()
+      |
+        m instanceof AssertTrueMethod and
+        (
+          c instanceof TrueCompletion and success = true
+          or
+          c instanceof FalseCompletion and success = false
+        )
+        or
+        m instanceof AssertFalseMethod and
+        (
+          c instanceof TrueCompletion and success = false
+          or
+          c instanceof FalseCompletion and success = true
+        )
+        or
+        m instanceof AssertNullMethod and
+        (
+          c.(NullnessCompletion).isNull() and success = true
+          or
+          c.(NullnessCompletion).isNonNull() and success = false
+        )
+        or
+        m instanceof AssertNonNullMethod and
+        (
+          c.(NullnessCompletion).isNull() and success = false
+          or
+          c.(NullnessCompletion).isNonNull() and success = true
+        )
+      )
+    }
+
+    override predicate hasEntry(Callable c, ControlFlowElement succ) { none() }
+
+    override predicate hasExit(ControlFlowElement pred, ControlFlowElement succ, Completion c) {
+      this.appliesTo(pred) and
+      pred = a and
+      succ = succ(pred, c) and
+      (
+        success = true and
+        c instanceof NormalCompletion
+        or
+        success = false and
+        not c instanceof NormalCompletion
+      )
+    }
+
+    override Callable hasExit(ControlFlowElement pred, Completion c) {
+      this.appliesTo(pred) and
+      pred = a and
+      result = succExit(pred, c) and
+      (
+        success = true and
+        c instanceof NormalCompletion
+        or
+        success = false and
+        not c instanceof NormalCompletion
+      )
+    }
+
+    override predicate hasSuccessor(ControlFlowElement pred, ControlFlowElement succ, Completion c) {
+      this.appliesTo(pred) and
+      succ = succ(pred, c) and
+      succ = getAnAssertionDescendant(a)
     }
   }
 }
@@ -467,7 +598,7 @@ module FinallySplitting {
    * A split for elements belonging to a `finally` block, which determines how to
    * continue execution after leaving the `finally` block. For example, in
    *
-   * ```
+   * ```csharp
    * try
    * {
    *     if (!M())
@@ -509,11 +640,11 @@ module FinallySplitting {
   }
 
   private int getListOrder(FinallySplitKind kind) {
-    result = InitializerSplitting::getNextListOrder() + kind.getNestLevel()
+    result = AssertionSplitting::getNextListOrder() + kind.getNestLevel()
   }
 
   int getNextListOrder() {
-    result = max(int i | i = getListOrder(_) + 1 or i = InitializerSplitting::getNextListOrder())
+    result = max(int i | i = getListOrder(_) + 1 or i = AssertionSplitting::getNextListOrder())
   }
 
   private class FinallySplitKind extends SplitKind, TFinallySplitKind {
@@ -599,7 +730,7 @@ module FinallySplitting {
       // If this split is normal, and an outer split can exit based on a inherited
       // completion, we need to exit this split as well. For example, in
       //
-      // ```
+      // ```csharp
       // bool done;
       // try
       // {
@@ -677,7 +808,7 @@ module ExceptionHandlerSplitting {
    * A split for elements belonging to a `catch` clause, which determines the type of
    * exception to handle. For example, in
    *
-   * ```
+   * ```csharp
    * try
    * {
    *     if (M() > 0)
@@ -698,11 +829,11 @@ module ExceptionHandlerSplitting {
    * ```
    *
    * all control flow nodes in
-   * ```
+   * ```csharp
    * catch (ArgumentException e)
    * ```
    * and
-   * ```
+   * ```csharp
    * catch (ArithmeticException e) when (e.Message != null)
    * ```
    * have two splits: one representing the `try` block throwing an `ArgumentException`,
@@ -853,7 +984,7 @@ module BooleanSplitting {
      *
      * For example, in
      *
-     * ```
+     * ```csharp
      * var b = GetB();
      * if (b)
      *     Console.WriteLine("b is true");
@@ -892,7 +1023,7 @@ module BooleanSplitting {
    *
    * For example, in
    *
-   * ```
+   * ```csharp
    * var b = GetB();
    * if (b)
    *     Console.WriteLine("b is true");
@@ -969,7 +1100,7 @@ module BooleanSplitting {
    * A split for elements that can reach a condition where this split determines
    * the Boolean value that the condition evaluates to. For example, in
    *
-   * ```
+   * ```csharp
    * if (b)
    *     Console.WriteLine("b is true");
    * if (!b)
@@ -1109,7 +1240,7 @@ module BooleanSplitting {
   }
 }
 
-module LoopUnrollingSplitting {
+module LoopSplitting {
   private import semmle.code.csharp.controlflow.Guards as Guards
   private import PreBasicBlocks
   private import PreSsa
@@ -1125,53 +1256,80 @@ module LoopUnrollingSplitting {
   }
 
   /**
-   * A loop where the body is guaranteed to be executed at least once, and
-   * can therefore be unrolled in the control flow graph.
+   * A loop where the body is guaranteed to be executed at least once, and hence
+   * can be unrolled in the control flow graph, or where the body is guaranteed
+   * to never be executed, and hence can be removed from the control flow graph.
    */
-  abstract class UnrollableLoopStmt extends LoopStmt {
-    /** Holds if the step `pred --c--> succ` should start loop unrolling. */
-    abstract predicate startUnroll(ControlFlowElement pred, ControlFlowElement succ, Completion c);
+  abstract class AnalyzableLoopStmt extends LoopStmt {
+    /** Holds if the step `pred --c--> succ` should start the split. */
+    abstract predicate start(ControlFlowElement pred, ControlFlowElement succ, Completion c);
 
-    /** Holds if the step `pred --c--> succ` should stop loop unrolling. */
-    abstract predicate stopUnroll(ControlFlowElement pred, ControlFlowElement succ, Completion c);
+    /** Holds if the step `pred --c--> succ` should stop the split. */
+    abstract predicate stop(ControlFlowElement pred, ControlFlowElement succ, Completion c);
 
     /**
-     * Holds if any step `pred --c--> _` should be pruned from the unrolled loop
-     * (the loop condition evaluating to `false`).
+     * Holds if any step `pred --c--> _` should be pruned from the control flow graph.
      */
     abstract predicate pruneLoopCondition(ControlFlowElement pred, ConditionalCompletion c);
+
+    /**
+     * Holds if the body is guaranteed to be executed at least once. If not, the
+     * body is guaranteed to never be executed.
+     */
+    abstract predicate isUnroll();
   }
 
-  private class UnrollableForeachStmt extends UnrollableLoopStmt, ForeachStmt {
-    UnrollableForeachStmt() {
-      exists(Guards::AbstractValues::EmptyCollectionValue v | v.isNonEmpty() |
-        emptinessGuarded(_, this.getIterableExpr(), v)
-        or
-        this.getIterableExpr() = v.getAnExpr()
-      )
+  private class AnalyzableForeachStmt extends AnalyzableLoopStmt, ForeachStmt {
+    Guards::AbstractValues::EmptyCollectionValue v;
+
+    AnalyzableForeachStmt() {
+      /*
+       * We use `unique` to avoid degenerate cases like
+       * ```csharp
+       * if (xs.Length == 0)
+       *     return;
+       * if (xs.Length > 0)
+       *     return;
+       * foreach (var x in xs)
+       *     ....
+       * ```
+       * where the iterator expression `xs` is guarded by both an emptiness check
+       * and a non-emptiness check.
+       */
+
+      v =
+        unique(Guards::AbstractValues::EmptyCollectionValue v0 |
+          emptinessGuarded(_, this.getIterableExpr(), v0)
+          or
+          this.getIterableExpr() = v0.getAnExpr()
+        |
+          v0
+        )
     }
 
-    override predicate startUnroll(ControlFlowElement pred, ControlFlowElement succ, Completion c) {
+    override predicate start(ControlFlowElement pred, ControlFlowElement succ, Completion c) {
       pred = last(this.getIterableExpr(), c) and
       succ = this
     }
 
-    override predicate stopUnroll(ControlFlowElement pred, ControlFlowElement succ, Completion c) {
+    override predicate stop(ControlFlowElement pred, ControlFlowElement succ, Completion c) {
       pred = this and
       succ = succ(pred, c)
     }
 
     override predicate pruneLoopCondition(ControlFlowElement pred, ConditionalCompletion c) {
       pred = this and
-      c.(EmptinessCompletion).isEmpty()
+      c = any(EmptinessCompletion ec | if v.isEmpty() then not ec.isEmpty() else ec.isEmpty())
     }
+
+    override predicate isUnroll() { v.isNonEmpty() }
   }
 
   /**
-   * A split for loops where the body is guaranteed to be executed at least once, and
-   * can therefore be unrolled in the control flow graph. For example, in
+   * A split for loops where the body is guaranteed to be executed at least once, or
+   * guaranteed to never be executed. For example, in
    *
-   * ```
+   * ```csharp
    * void M(string[] args)
    * {
    *     if (args.Length == 0)
@@ -1184,21 +1342,23 @@ module LoopUnrollingSplitting {
    * the `foreach` loop is guaranteed to be executed at least once, as a result of the
    * `args.Length == 0` check.
    */
-  class LoopUnrollingSplitImpl extends SplitImpl, TLoopUnrollingSplit {
-    UnrollableLoopStmt loop;
+  class LoopSplitImpl extends SplitImpl, TLoopSplit {
+    AnalyzableLoopStmt loop;
 
-    LoopUnrollingSplitImpl() { this = TLoopUnrollingSplit(loop) }
+    LoopSplitImpl() { this = TLoopSplit(loop) }
 
     override string toString() {
-      result = "unroll (line " + loop.getLocation().getStartLine() + ")"
+      if loop.isUnroll()
+      then result = "unroll (line " + loop.getLocation().getStartLine() + ")"
+      else result = "skip (line " + loop.getLocation().getStartLine() + ")"
     }
   }
 
-  private int getListOrder(UnrollableLoopStmt loop) {
+  private int getListOrder(AnalyzableLoopStmt loop) {
     exists(Callable c, int r | c = loop.getEnclosingCallable() |
       result = r + BooleanSplitting::getNextListOrder() - 1 and
       loop =
-        rank[r](UnrollableLoopStmt loop0 |
+        rank[r](AnalyzableLoopStmt loop0 |
           loop0.getEnclosingCallable() = c
         |
           loop0 order by loop0.getLocation().getStartLine(), loop0.getLocation().getStartColumn()
@@ -1210,21 +1370,21 @@ module LoopUnrollingSplitting {
     result = max(int i | i = getListOrder(_) + 1 or i = BooleanSplitting::getNextListOrder())
   }
 
-  private class LoopUnrollingSplitKind extends SplitKind, TLoopUnrollingSplitKind {
-    private UnrollableLoopStmt loop;
+  private class LoopSplitKind extends SplitKind, TLoopSplitKind {
+    private AnalyzableLoopStmt loop;
 
-    LoopUnrollingSplitKind() { this = TLoopUnrollingSplitKind(loop) }
+    LoopSplitKind() { this = TLoopSplitKind(loop) }
 
     override int getListOrder() { result = getListOrder(loop) }
 
     override string toString() { result = "Unroll" }
   }
 
-  private class LoopUnrollingSplitInternal extends SplitInternal, LoopUnrollingSplitImpl {
-    override LoopUnrollingSplitKind getKind() { result = TLoopUnrollingSplitKind(loop) }
+  private class LoopUnrollingSplitInternal extends SplitInternal, LoopSplitImpl {
+    override LoopSplitKind getKind() { result = TLoopSplitKind(loop) }
 
     override predicate hasEntry(ControlFlowElement pred, ControlFlowElement succ, Completion c) {
-      loop.startUnroll(pred, succ, c)
+      loop.start(pred, succ, c)
     }
 
     override predicate hasEntry(Callable pred, ControlFlowElement succ) { none() }
@@ -1241,7 +1401,7 @@ module LoopUnrollingSplitting {
 
     override predicate hasExit(ControlFlowElement pred, ControlFlowElement succ, Completion c) {
       this.appliesToPredecessor(pred, c) and
-      loop.stopUnroll(pred, succ, c)
+      loop.stop(pred, succ, c)
     }
 
     override Callable hasExit(ControlFlowElement pred, Completion c) {
@@ -1252,7 +1412,7 @@ module LoopUnrollingSplitting {
     override predicate hasSuccessor(ControlFlowElement pred, ControlFlowElement succ, Completion c) {
       this.appliesToPredecessor(pred, c) and
       succ = succ(pred, c) and
-      not loop.stopUnroll(pred, succ, c)
+      not loop.stop(pred, succ, c)
     }
   }
 }
@@ -1338,7 +1498,7 @@ predicate succExitSplits(ControlFlowElement pred, Splits predSplits, Callable su
  *
  * For the successor relation
  *
- * ```
+ * ```ql
  * succSplits(ControlFlowElement pred, Splits predSplits, ControlFlowElement succ, Splits succSplits, Completion c)
  * ```
  *

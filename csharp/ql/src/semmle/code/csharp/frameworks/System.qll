@@ -21,6 +21,11 @@ class SystemUnboundGenericClass extends UnboundGenericClass {
   SystemUnboundGenericClass() { this.getNamespace() instanceof SystemNamespace }
 }
 
+/** An unbound generic struct in the `System` namespace. */
+class SystemUnboundGenericStruct extends UnboundGenericStruct {
+  SystemUnboundGenericStruct() { this.getNamespace() instanceof SystemNamespace }
+}
+
 /** An interface in the `System` namespace. */
 class SystemInterface extends Interface {
   SystemInterface() { this.getNamespace() instanceof SystemNamespace }
@@ -215,6 +220,35 @@ class SystemLazyClass extends SystemUnboundGenericClass {
   }
 }
 
+/** The `System.Nullable<T>` struct. */
+class SystemNullableStruct extends SystemUnboundGenericStruct {
+  SystemNullableStruct() {
+    this.hasName("Nullable<>") and
+    this.getNumberOfTypeParameters() = 1
+  }
+
+  /** Gets the `Value` property. */
+  Property getValueProperty() {
+    result.getDeclaringType() = this and
+    result.hasName("Value") and
+    result.getType() = getTypeParameter(0)
+  }
+
+  /** Gets the `HasValue` property. */
+  Property getHasValueProperty() {
+    result.getDeclaringType() = this and
+    result.hasName("HasValue") and
+    result.getType() instanceof BoolType
+  }
+
+  /** Gets a `GetValueOrDefault()` method. */
+  Method getAGetValueOrDefaultMethod() {
+    result.getDeclaringType() = this and
+    result.hasName("GetValueOrDefault") and
+    result.getReturnType() = getTypeParameter(0)
+  }
+}
+
 /** The `System.NullReferenceException` class. */
 class SystemNullReferenceExceptionClass extends SystemClass {
   SystemNullReferenceExceptionClass() { this.hasName("NullReferenceException") }
@@ -360,12 +394,11 @@ class SystemStringClass extends StringType {
     result.getReturnType() instanceof StringType
   }
 
-  /** Gets a `Join(string, ...)` method. */
+  /** Gets a `Join(...)` method. */
   Method getJoinMethod() {
     result.getDeclaringType() = this and
     result.hasName("Join") and
     result.getNumberOfParameters() > 1 and
-    result.getParameter(0).getType() instanceof StringType and
     result.getReturnType() instanceof StringType
   }
 
@@ -564,7 +597,7 @@ private EqualsMethod getInheritedEqualsMethod(ValueOrRefType t) { t.hasMethod(re
  *
  * Example:
  *
- * ```
+ * ```csharp
  * abstract class A<T> : IEquatable<T> {
  *   public abstract bool Equals(T other);
  *   public override bool Equals(object other) { return other != null && GetType() == other.GetType() && Equals((T)other); }
@@ -653,7 +686,7 @@ private DisposeMethod getInheritedDisposeMethod(ValueOrRefType t) { t.hasMethod(
  *
  * Example:
  *
- * ```
+ * ```csharp
  * class A : IDisposable {
  *   public void Dispose() { Dispose(true); }
  *   public virtual void Dispose(bool disposing) { ... }

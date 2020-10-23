@@ -9,10 +9,7 @@ import semmle.code.cpp.models.interfaces.FormattingFunction
 import semmle.code.cpp.models.implementations.Printf
 
 class PrintfFormatAttribute extends FormatAttribute {
-  PrintfFormatAttribute() {
-    getArchetype() = "printf" or
-    getArchetype() = "__printf__"
-  }
+  PrintfFormatAttribute() { getArchetype() = ["printf", "__printf__"] }
 }
 
 /**
@@ -20,7 +17,7 @@ class PrintfFormatAttribute extends FormatAttribute {
  * function by its use of the GNU `format` attribute.
  */
 class AttributeFormattingFunction extends FormattingFunction {
-  override string getCanonicalQLClass() { result = "AttributeFormattingFunction" }
+  override string getAPrimaryQlClass() { result = "AttributeFormattingFunction" }
 
   AttributeFormattingFunction() {
     exists(PrintfFormatAttribute printf_attrib |
@@ -49,12 +46,44 @@ predicate primitiveVariadicFormatter(TopLevelFunction f, int formatParamIndex) {
   )
 }
 
+/**
+ * A standard function such as `vsprintf` that has an output parameter
+ * and a variable argument list of type `va_arg`.
+ */
+private predicate primitiveVariadicFormatterOutput(TopLevelFunction f, int outputParamIndex) {
+  // note: this might look like the regular expression in `primitiveVariadicFormatter`, but
+  // there is one important difference: the [fs] part is not optional, as these classify
+  // the `printf` variants that write to a buffer.
+  // Conveniently, these buffer parameters are all at index 0.
+  f.getName().regexpMatch("_?_?va?[fs]n?w?printf(_s)?(_p)?(_l)?") and outputParamIndex = 0
+}
+
 private predicate callsVariadicFormatter(Function f, int formatParamIndex) {
   exists(FunctionCall fc, int i |
     variadicFormatter(fc.getTarget(), i) and
     fc.getEnclosingFunction() = f and
     fc.getArgument(i) = f.getParameter(formatParamIndex).getAnAccess()
   )
+}
+
+private predicate callsVariadicFormatterOutput(Function f, int outputParamIndex) {
+  exists(FunctionCall fc, int i |
+    fc.getEnclosingFunction() = f and
+    variadicFormatterOutput(fc.getTarget(), i) and
+    fc.getArgument(i) = f.getParameter(outputParamIndex).getAnAccess()
+  )
+}
+
+/**
+ * Holds if `f` is a function such as `vprintf` that takes variable argument list
+ * of type `va_arg` and writes formatted output to a buffer given as a parameter at
+ * index `outputParamIndex`, if any.
+ */
+private predicate variadicFormatterOutput(Function f, int outputParamIndex) {
+  primitiveVariadicFormatterOutput(f, outputParamIndex)
+  or
+  not f.isVarargs() and
+  callsVariadicFormatterOutput(f, outputParamIndex)
 }
 
 /**
@@ -73,11 +102,13 @@ predicate variadicFormatter(Function f, int formatParamIndex) {
  * string and a variable number of arguments.
  */
 class UserDefinedFormattingFunction extends FormattingFunction {
-  override string getCanonicalQLClass() { result = "UserDefinedFormattingFunction" }
+  override string getAPrimaryQlClass() { result = "UserDefinedFormattingFunction" }
 
   UserDefinedFormattingFunction() { isVarargs() and callsVariadicFormatter(this, _) }
 
   override int getFormatParameterIndex() { callsVariadicFormatter(this, result) }
+
+  override int getOutputParameterIndex() { callsVariadicFormatterOutput(this, result) }
 }
 
 /**
@@ -86,7 +117,7 @@ class UserDefinedFormattingFunction extends FormattingFunction {
 class FormattingFunctionCall extends Expr {
   FormattingFunctionCall() { this.(Call).getTarget() instanceof FormattingFunction }
 
-  override string getCanonicalQLClass() { result = "FormattingFunctionCall" }
+  override string getAPrimaryQlClass() { result = "FormattingFunctionCall" }
 
   /**
    * Gets the formatting function being called.
@@ -567,12 +598,12 @@ class FormatLiteral extends Literal {
         or
         len = "l" and result = this.getLongType()
         or
-        (len = "ll" or len = "L" or len = "q") and
+        len = ["ll", "L", "q"] and
         result instanceof LongLongType
         or
         len = "j" and result = this.getIntmax_t()
         or
-        (len = "z" or len = "Z") and
+        len = ["z", "Z"] and
         (result = this.getSize_t() or result = this.getSsize_t())
         or
         len = "t" and result = this.getPtrdiff_t()
@@ -605,12 +636,12 @@ class FormatLiteral extends Literal {
         or
         len = "l" and result = this.getLongType()
         or
-        (len = "ll" or len = "L" or len = "q") and
+        len = ["ll", "L", "q"] and
         result instanceof LongLongType
         or
         len = "j" and result = this.getIntmax_t()
         or
-        (len = "z" or len = "Z") and
+        len = ["z", "Z"] and
         (result = this.getSize_t() or result = this.getSsize_t())
         or
         len = "t" and result = this.getPtrdiff_t()
@@ -636,9 +667,7 @@ class FormatLiteral extends Literal {
   FloatingPointType getFloatingPointConversion(int n) {
     exists(string len |
       len = this.getLength(n) and
-      if len = "L" or len = "ll"
-      then result instanceof LongDoubleType
-      else result instanceof DoubleType
+      if len = ["L", "ll"] then result instanceof LongDoubleType else result instanceof DoubleType
     )
   }
 
@@ -655,7 +684,7 @@ class FormatLiteral extends Literal {
         or
         len = "l" and base = this.getLongType()
         or
-        (len = "ll" or len = "L") and
+        len = ["ll", "L"] and
         base instanceof LongLongType
         or
         len = "q" and base instanceof LongLongType
@@ -702,12 +731,12 @@ class FormatLiteral extends Literal {
     exists(string len, string conv |
       this.parseConvSpec(n, _, _, _, _, _, len, conv) and
       (
-        (conv = "c" or conv = "C") and
+        conv = ["c", "C"] and
         len = "h" and
         result instanceof PlainCharType
         or
-        (conv = "c" or conv = "C") and
-        (len = "l" or len = "w") and
+        conv = ["c", "C"] and
+        len = ["l", "w"] and
         result = getWideCharType()
         or
         conv = "c" and
@@ -747,12 +776,12 @@ class FormatLiteral extends Literal {
     exists(string len, string conv |
       this.parseConvSpec(n, _, _, _, _, _, len, conv) and
       (
-        (conv = "s" or conv = "S") and
+        conv = ["s", "S"] and
         len = "h" and
         result.(PointerType).getBaseType() instanceof PlainCharType
         or
-        (conv = "s" or conv = "S") and
-        (len = "l" or len = "w") and
+        conv = ["s", "S"] and
+        len = ["l", "w"] and
         result.(PointerType).getBaseType() = getWideCharType()
         or
         conv = "s" and
@@ -789,10 +818,7 @@ class FormatLiteral extends Literal {
 
   private Type getConversionType9(int n) {
     this.getConversionChar(n) = "Z" and
-    (
-      this.getLength(n) = "l" or
-      this.getLength(n) = "w"
-    ) and
+    this.getLength(n) = ["l", "w"] and
     exists(Type t |
       t.getName() = "UNICODE_STRING" and
       result.(PointerType).getBaseType() = t
@@ -945,10 +971,7 @@ class FormatLiteral extends Literal {
           len = (afterdot.maximum(1) + 6).maximum(1 + 1 + dot + afterdot + 1 + 1 + 3)
         ) // (e.g. "-1.59203e-319")
         or
-        (
-          this.getConversionChar(n).toLowerCase() = "d" or
-          this.getConversionChar(n).toLowerCase() = "i"
-        ) and
+        this.getConversionChar(n).toLowerCase() = ["d", "i"] and
         // e.g. -2^31 = "-2147483648"
         exists(int sizeBits |
           sizeBits =

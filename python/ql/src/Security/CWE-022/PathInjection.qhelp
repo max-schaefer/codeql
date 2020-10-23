@@ -26,7 +26,7 @@ Ideally, follow these rules:
 <li>Do not allow directory separators such as "/" or "\" (depending on the file system).</li>
 <li>Do not rely on simply replacing problematic sequences such as "../". For example, after
 applying this filter to ".../...//", the resulting string would still be "../".</li>
-<li>Use a whitelist of known good patterns.</li>
+<li>Use an allowlist of known good patterns.</li>
 </ul>
 </recommendation>
 
@@ -55,7 +55,7 @@ known prefix. This ensures that regardless of the user input, the resulting path
 </example>
 
 <references>
-<li>OWASP: <a href="https://www.owasp.org/index.php/Path_traversal">Path Traversal</a>.</li>
+<li>OWASP: <a href="https://owasp.org/www-community/attacks/Path_Traversal">Path Traversal</a>.</li>
 <li>npm: <a href="http://werkzeug.pocoo.org/docs/utils/#werkzeug.utils.secure_filename">werkzeug.utils.secure_filename</a>.</li>
 </references>
 </qhelp>

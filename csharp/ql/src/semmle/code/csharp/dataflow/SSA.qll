@@ -171,7 +171,7 @@ module Ssa {
        * callable. A pseudo read is inserted to make assignments to `out`/`ref` variables
        * live, for example line 1 in
        *
-       * ```
+       * ```csharp
        * void M(out int i) {
        *   i = 0;
        * }
@@ -189,7 +189,7 @@ module Ssa {
        * A pseudo read is inserted to make assignments to the `ref` variable live, for example
        * line 2 in
        *
-       * ```
+       * ```csharp
        * void M() {
        *   ref int i = ref GetRef();
        *   i = 0;
@@ -612,7 +612,7 @@ module Ssa {
      * For example, if `bb` is a basic block with a phi node for `v` (considered
      * to be at index -1), reads `v` at node 2, and defines it at node 5, we have:
      *
-     * ```
+     * ```ql
      * ssaRefRank(bb, -1, v, SsaDef()) = 1    // phi node
      * ssaRefRank(bb,  2, v, Read())   = 2    // read at node 2
      * ssaRefRank(bb,  5, v, SsaDef()) = 3    // definition at node 5
@@ -706,9 +706,9 @@ module Ssa {
 
     /**
      * Holds if `def` is accessed in basic block `bb1` (either a read or a write),
-     * `bb2` is a transitive successor of `bb1`, and `def` is *maybe* read in `bb2`
-     * or one of its transitive successors, but not in any block on the path between
-     * `bb1` and `bb2`.
+     * `bb2` is a transitive successor of `bb1`, `def` is live at the end of `bb1`,
+     * and the underlying variable for `def` is neither read nor written in any block
+     * on the path between `bb1` and `bb2`.
      */
     private predicate varBlockReaches(TrackedDefinition def, BasicBlock bb1, BasicBlock bb2) {
       varOccursInBlock(def, bb1, _) and
@@ -893,7 +893,7 @@ module Ssa {
    * of the field or property. For example, there is an implicit update of
    * `this.Field` on line 7 in
    *
-   * ```
+   * ```csharp
    * int Field;
    *
    * void SetField(int i) { Field = i; }
@@ -1018,7 +1018,7 @@ module Ssa {
     private predicate intraInstanceCallEdge(Callable c1, InstanceCallable c2) {
       exists(Call c |
         c.getEnclosingCallable() = c1 and
-        c2 = getARuntimeTarget(c) and
+        c2 = getARuntimeTarget(c, _) and
         c.(QualifiableExpr).targetIsLocalInstance()
       )
     }
@@ -1034,15 +1034,28 @@ module Ssa {
      *     the SSA library and `Call.getARuntimeTarget()` mutually recursive), and
      *
      * (3) indirect calls to delegates via calls to library callables are included.
+     *
+     * The Boolean `libraryDelegateCall` indicates whether `c` is a call to a library
+     * method and the result is a delegate passed to `c`. For example, in
+     *
+     * ```csharp
+     * Lazy<int> M1()
+     * {
+     *     return new Lazy<int>(M2);
+     * }
+     * ```
+     *
+     * the constructor call `new Lazy<int>(M2)` includes `M2` as a target.
      */
-    Callable getARuntimeTarget(Call c) {
+    Callable getARuntimeTarget(Call c, boolean libraryDelegateCall) {
       // Non-delegate call: use dispatch library
       exists(DispatchCall dc | dc.getCall() = c |
-        result = dc.getADynamicTarget().getSourceDeclaration()
+        result = dc.getADynamicTarget().getSourceDeclaration() and
+        libraryDelegateCall = false
       )
       or
       // Delegate call: use simple analysis
-      result = SimpleDelegateAnalysis::getARuntimeDelegateTarget(c)
+      result = SimpleDelegateAnalysis::getARuntimeDelegateTarget(c, libraryDelegateCall)
     }
 
     private module SimpleDelegateAnalysis {
@@ -1055,12 +1068,14 @@ module Ssa {
        * Either `c` is a delegate call and `e` is the qualifier, or `c` is a call to
        * a library callable and `e` is a delegate argument.
        */
-      private predicate delegateCall(Call c, Expr e) {
-        c = any(DelegateCall dc | e = dc.getDelegateExpr())
+      private predicate delegateCall(Call c, Expr e, boolean libraryDelegateCall) {
+        c = any(DelegateCall dc | e = dc.getDelegateExpr()) and
+        libraryDelegateCall = false
         or
         c.getTarget().fromLibrary() and
         e = c.getAnArgument() and
-        e.getType() instanceof SystemLinqExpressions::DelegateExtType
+        e.getType() instanceof SystemLinqExpressions::DelegateExtType and
+        libraryDelegateCall = true
       }
 
       /** Holds if expression `e` is a delegate creation for callable `c` of type `t`. */
@@ -1090,7 +1105,7 @@ module Ssa {
           callable = call.getTarget() or
           callable = call.getTarget().(Method).getAnOverrider+() or
           callable = call.getTarget().(Method).getAnUltimateImplementor() or
-          callable = getARuntimeDelegateTarget(call)
+          callable = getARuntimeDelegateTarget(call, false)
         )
         or
         pred = succ.(DelegateCreation).getArgument()
@@ -1110,7 +1125,7 @@ module Ssa {
       }
 
       private predicate reachesDelegateCall(Expr e) {
-        delegateCall(_, e)
+        delegateCall(_, e, _)
         or
         exists(Expr mid | reachesDelegateCall(mid) | delegateFlowStep(e, mid))
       }
@@ -1128,12 +1143,14 @@ module Ssa {
       }
 
       /** Gets a run-time target for the delegate call `c`. */
-      Callable getARuntimeDelegateTarget(Call c) { delegateCall(c, delegateCallSource(result)) }
+      Callable getARuntimeDelegateTarget(Call c, boolean libraryDelegateCall) {
+        delegateCall(c, delegateCallSource(result), libraryDelegateCall)
+      }
     }
 
     /** Holds if `(c1,c2)` is an edge in the call graph. */
     predicate callEdge(Callable c1, Callable c2) {
-      exists(Call c | c.getEnclosingCallable() = c1 | getARuntimeTarget(c) = c2)
+      exists(Call c | c.getEnclosingCallable() = c1 and c2 = getARuntimeTarget(c, _))
     }
 
     /**
@@ -1179,7 +1196,7 @@ module Ssa {
     pragma[noinline]
     predicate callAt(BasicBlock bb, int i, Call call) {
       bb.getNode(i) = call.getAControlFlowNode() and
-      getARuntimeTarget(call).hasBody()
+      getARuntimeTarget(call, _).hasBody()
     }
 
     /**
@@ -1201,7 +1218,7 @@ module Ssa {
     private predicate pruneFromLeft(Callable c) {
       exists(Call call, TrackedFieldOrProp f |
         updateCandidate(_, _, f, call) and
-        c = getARuntimeTarget(call) and
+        c = getARuntimeTarget(call, _) and
         generalSetter(_, f.getAssignable(), _)
       )
       or
@@ -1238,7 +1255,7 @@ module Ssa {
       updateCandidate(_, _, tfp, call) and
       fp = tfp.getAssignable() and
       generalSetter(_, fp, _) and
-      c1 = getARuntimeTarget(call)
+      c1 = getARuntimeTarget(call, _)
     }
 
     pragma[noinline]
@@ -1279,7 +1296,7 @@ module Ssa {
       Call call, TrackedFieldOrProp tfp, Callable setter
     ) {
       updateCandidate(_, _, tfp, call) and
-      setsOwnFieldOrPropTransitive(getARuntimeTarget(call), tfp.getAssignable(), setter)
+      setsOwnFieldOrPropTransitive(getARuntimeTarget(call, _), tfp.getAssignable(), setter)
     }
 
     private predicate updatesNamedFieldOrPropPossiblyLive(
@@ -1359,7 +1376,7 @@ module Ssa {
    * site that conceivably could reach an update of the captured variable.
    * For example, there is an implicit update of `v` on line 4 in
    *
-   * ```
+   * ```csharp
    * int M() {
    *   int i = 0;
    *   Action a = () => { i = 1; };
@@ -1430,7 +1447,14 @@ module Ssa {
     ) {
       possiblyLiveAtAllNodes(bb, v) and
       callAt(bb, i, call) and
-      relevantDefinition(_, v.getAssignable(), _)
+      exists(Assignable a |
+        a = v.getAssignable() and
+        relevantDefinition(_, a, _) and
+        not exists(AssignableDefinitions::OutRefDefinition def |
+          def.getCall() = call and
+          def.getTarget() = a
+        )
+      )
     }
 
     /**
@@ -1440,7 +1464,7 @@ module Ssa {
     private predicate pruneFromLeft(Callable c) {
       exists(Call call, CapturedWrittenLocalScopeSourceVariable v |
         updateCandidate(_, _, v, call) and
-        c = getARuntimeTarget(call) and
+        c = getARuntimeTarget(call, _) and
         relevantDefinition(_, v.getAssignable(), _)
       )
       or
@@ -1478,12 +1502,12 @@ module Ssa {
     pragma[noinline]
     private predicate updatesCapturedVariablePrefix(
       Call call, CapturedWrittenLocalScopeSourceVariable v, PrunedCallable c,
-      CapturedWrittenLocalScopeVariable captured
+      CapturedWrittenLocalScopeVariable captured, boolean libraryDelegateCall
     ) {
       updateCandidate(_, _, v, call) and
       captured = v.getAssignable() and
       relevantDefinitionProj(_, captured) and
-      c = getARuntimeTarget(call)
+      c = getARuntimeTarget(call, libraryDelegateCall)
     }
 
     /**
@@ -1498,11 +1522,13 @@ module Ssa {
       Call call, CapturedWrittenLocalScopeSourceVariable v, PrunedCallable writer,
       boolean additionalCalls
     ) {
-      exists(PrunedCallable c, CapturedWrittenLocalScopeVariable captured |
-        updatesCapturedVariablePrefix(call, v, c, captured) and
+      exists(
+        PrunedCallable c, CapturedWrittenLocalScopeVariable captured, boolean libraryDelegateCall
+      |
+        updatesCapturedVariablePrefix(call, v, c, captured, libraryDelegateCall) and
         relevantDefinitionProj(writer, captured) and
         (
-          c = writer and additionalCalls = false
+          c = writer and additionalCalls = libraryDelegateCall
           or
           callEdgePrunedPlus(c, writer) and additionalCalls = true
         )
@@ -1559,7 +1585,7 @@ module Ssa {
    *
    * Example:
    *
-   * ```
+   * ```csharp
    * void M() {
    *   int i = 0;
    *   void M2() {
@@ -1660,7 +1686,7 @@ module Ssa {
     private predicate pruneFromLeft(Callable c) {
       exists(Call call, CapturedReadLocalScopeSourceVariable v |
         implicitReadCandidate(_, _, call.getAControlFlowNode(), v) and
-        c = getARuntimeTarget(call)
+        c = getARuntimeTarget(call, _)
       )
       or
       exists(Callable mid | pruneFromLeft(mid) | callEdge(mid, c))
@@ -1695,12 +1721,12 @@ module Ssa {
     pragma[noinline]
     private predicate readsCapturedVariablePrefix(
       ControlFlow::Node call, CapturedReadLocalScopeSourceVariable v, PrunedCallable c,
-      CapturedReadLocalScopeVariable captured
+      CapturedReadLocalScopeVariable captured, boolean libraryDelegateCall
     ) {
       implicitReadCandidate(_, _, call, v) and
       captured = v.getAssignable() and
       capturerReads(_, captured) and
-      c = getARuntimeTarget(call.getElement())
+      c = getARuntimeTarget(call.getElement(), libraryDelegateCall)
     }
 
     /**
@@ -1715,11 +1741,13 @@ module Ssa {
       ControlFlow::Nodes::ElementNode call, CapturedReadLocalScopeSourceVariable v, Callable reader,
       boolean additionalCalls
     ) {
-      exists(PrunedCallable c, CapturedReadLocalScopeVariable captured |
-        readsCapturedVariablePrefix(call, v, c, captured) and
+      exists(
+        PrunedCallable c, CapturedReadLocalScopeVariable captured, boolean libraryDelegateCall
+      |
+        readsCapturedVariablePrefix(call, v, c, captured, libraryDelegateCall) and
         capturerReads(reader, captured) and
         (
-          c = reader and additionalCalls = false
+          c = reader and additionalCalls = libraryDelegateCall
           or
           callEdgePrunedPlus(c, reader) and additionalCalls = true
         )
@@ -1736,7 +1764,7 @@ module Ssa {
      *
      * Example:
      *
-     * ```
+     * ```csharp
      * class C {
      *   void M1() {
      *     int i = 0;
@@ -1758,7 +1786,6 @@ module Ssa {
         def.getSourceVariable().getAssignable() = lsv
       |
         lsv = v.getAssignable() and
-        adef = def.getAPossibleDefinition() and
         bb.getNode(i) = adef.getAControlFlowNode() and
         updatesCapturedVariable(def.getCall(), _, adef, additionalCalls)
       )
@@ -1775,7 +1802,7 @@ module Ssa {
      *
      * Example:
      *
-     * ```
+     * ```csharp
      * class C {
      *   void M1() {
      *     int i = 0;
@@ -1845,7 +1872,7 @@ module Ssa {
         (
           exists(ReadKind rk | liveAfterWrite(bb, i, v, rk) |
             // A `ref` assignment such as
-            // ```
+            // ```csharp
             // ref int i = ref GetRef();
             // ```
             // is dead when there are no reads of or writes to `i`.
@@ -2005,7 +2032,7 @@ module Ssa {
      * can be reached from this SSA definition without passing through any
      * other SSA definitions. Example:
      *
-     * ```
+     * ```csharp
      * int Field;
      *
      * void SetField(int i) {
@@ -2034,7 +2061,7 @@ module Ssa {
      * control flow node `cfn` that can be reached from this SSA definition
      * without passing through any other SSA definitions. Example:
      *
-     * ```
+     * ```csharp
      * int Field;
      *
      * void SetField(int i) {
@@ -2066,7 +2093,7 @@ module Ssa {
      * can be reached from this SSA definition without passing through any
      * other SSA definition or read. Example:
      *
-     * ```
+     * ```csharp
      * int Field;
      *
      * void SetField(int i) {
@@ -2102,7 +2129,7 @@ module Ssa {
      * control flow node `cfn` that can be reached from this SSA definition
      * without passing through any other SSA definition or read. Example:
      *
-     * ```
+     * ```csharp
      * int Field;
      *
      * void SetField(int i) {
@@ -2142,7 +2169,7 @@ module Ssa {
      * another SSA definition for the source variable, without passing through
      * any other read. Example:
      *
-     * ```
+     * ```csharp
      * int Field;
      *
      * void SetField(int i) {
@@ -2172,7 +2199,7 @@ module Ssa {
      * enclosing callable, or another SSA definition for the source variable,
      * without passing through any other read. Example:
      *
-     * ```
+     * ```csharp
      * int Field;
      *
      * void SetField(int i) {
@@ -2203,7 +2230,7 @@ module Ssa {
      * Gets a definition that ultimately defines this SSA definition and is
      * not itself a pseudo node. Example:
      *
-     * ```
+     * ```csharp
      * int Field;
      *
      * void SetField(int i) {
@@ -2322,7 +2349,7 @@ module Ssa {
      *
      * Example:
      *
-     * ```
+     * ```csharp
      * class C {
      *   void M1() {
      *     int i = 0;
@@ -2349,7 +2376,7 @@ module Ssa {
      *
      * Example:
      *
-     * ```
+     * ```csharp
      * class C {
      *   void M1() {
      *     int i = 0;
@@ -2510,7 +2537,7 @@ module Ssa {
     /**
      * Gets an input of this phi node. Example:
      *
-     * ```
+     * ```csharp
      * int Field;
      *
      * void SetField(int i) {
@@ -2535,6 +2562,13 @@ module Ssa {
         bb.getAPredecessor() = phiPred and
         ssaDefReachesEndOfBlock(phiPred, result, v)
       )
+    }
+
+    /** Holds if `inp` is an input to the phi node along the edge originating in `bb`. */
+    predicate hasInputFromBlock(Definition inp, BasicBlock bb) {
+      this.getAnInput() = inp and
+      this.getBasicBlock().getAPredecessor() = bb and
+      inp.isLiveAtEndOfBlock(bb)
     }
 
     override string toString() {

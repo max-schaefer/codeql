@@ -1,5 +1,6 @@
 import javascript
 private import semmle.javascript.dataflow.InferredTypes
+private import semmle.javascript.dataflow.internal.PreCallGraphStep
 
 /**
  * Classes and predicates for modelling TaintTracking steps for arrays.
@@ -23,13 +24,11 @@ module ArrayTaintTracking {
   predicate arrayFunctionTaintStep(DataFlow::Node pred, DataFlow::Node succ, DataFlow::CallNode call) {
     // `array.map(function (elt, i, ary) { ... })`: if `array` is tainted, then so are
     // `elt` and `ary`; similar for `forEach`
-    exists(string name, Function f, int i |
-      (name = "map" or name = "forEach") and
-      (i = 0 or i = 2) and
+    exists(Function f |
       call.getArgument(0).analyze().getAValue().(AbstractFunction).getFunction() = f and
-      call.(DataFlow::MethodCallNode).getMethodName() = name and
+      call.(DataFlow::MethodCallNode).getMethodName() = ["map", "forEach"] and
       pred = call.getReceiver() and
-      succ = DataFlow::parameterNode(f.getParameter(i))
+      succ = DataFlow::parameterNode(f.getParameter([0, 2]))
     )
     or
     // `array.map` with tainted return value in callback
@@ -40,42 +39,28 @@ module ArrayTaintTracking {
       succ = call
     )
     or
+    // `array.reduce` with tainted value in callback
+    call.(DataFlow::MethodCallNode).getMethodName() = "reduce" and
+    pred = call.getArgument(0).(DataFlow::FunctionNode).getAReturn() and // Require the argument to be a closure to avoid spurious call/return flow
+    succ = call
+    or
     // `array.push(e)`, `array.unshift(e)`: if `e` is tainted, then so is `array`.
-    exists(string name |
-      name = "push" or
-      name = "unshift"
-    |
-      pred = call.getAnArgument() and
-      succ.(DataFlow::SourceNode).getAMethodCall(name) = call
-    )
+    pred = call.getAnArgument() and
+    succ.(DataFlow::SourceNode).getAMethodCall(["push", "unshift"]) = call
     or
     // `array.push(...e)`, `array.unshift(...e)`: if `e` is tainted, then so is `array`.
-    exists(string name |
-      name = "push" or
-      name = "unshift"
-    |
-      pred = call.getASpreadArgument() and
-      // Make sure we handle reflective calls
-      succ = call.getReceiver().getALocalSource() and
-      call.getCalleeName() = name
-    )
+    pred = call.getASpreadArgument() and
+    // Make sure we handle reflective calls
+    succ = call.getReceiver().getALocalSource() and
+    call.getCalleeName() = ["push", "unshift"]
     or
     // `array.splice(i, del, e)`: if `e` is tainted, then so is `array`.
-    exists(string name | name = "splice" |
-      pred = call.getArgument(2) and
-      succ.(DataFlow::SourceNode).getAMethodCall(name) = call
-    )
+    pred = call.getArgument(2) and
+    succ.(DataFlow::SourceNode).getAMethodCall("splice") = call
     or
     // `e = array.pop()`, `e = array.shift()`, or similar: if `array` is tainted, then so is `e`.
-    exists(string name |
-      name = "pop" or
-      name = "shift" or
-      name = "slice" or
-      name = "splice"
-    |
-      call.(DataFlow::MethodCallNode).calls(pred, name) and
-      succ = call
-    )
+    call.(DataFlow::MethodCallNode).calls(pred, ["pop", "shift", "slice", "splice"]) and
+    succ = call
     or
     // `e = Array.from(x)`: if `x` is tainted, then so is `e`.
     call = DataFlow::globalVarRef("Array").getAPropertyRead("from").getACall() and
@@ -222,29 +207,32 @@ private module ArrayDataFlow {
    *
    * And the second parameter in the callback is the array ifself, so there is a `loadStoreStep` from the array to that second parameter.
    */
-  private class ArrayIteration extends DataFlow::AdditionalFlowStep, DataFlow::MethodCallNode {
-    ArrayIteration() {
-      this.getMethodName() = "map" or
-      this.getMethodName() = "forEach"
-    }
-
+  private class ArrayIteration extends PreCallGraphStep {
     override predicate loadStep(DataFlow::Node obj, DataFlow::Node element, string prop) {
-      prop = arrayElement() and
-      obj = this.getReceiver() and
-      element = getCallback(0).getParameter(0)
+      exists(DataFlow::MethodCallNode call |
+        call.getMethodName() = ["map", "forEach"] and
+        prop = arrayElement() and
+        obj = call.getReceiver() and
+        element = call.getCallback(0).getParameter(0)
+      )
     }
 
     override predicate storeStep(DataFlow::Node element, DataFlow::SourceNode obj, string prop) {
-      this.getMethodName() = "map" and
-      prop = arrayElement() and
-      element = this.getCallback(0).getAReturn() and
-      obj = this
+      exists(DataFlow::MethodCallNode call |
+        call.getMethodName() = "map" and
+        prop = arrayElement() and
+        element = call.getCallback(0).getAReturn() and
+        obj = call
+      )
     }
 
-    override predicate loadStoreStep(DataFlow::Node pred, DataFlow::Node succ, string prop) {
-      prop = arrayElement() and
-      pred = this.getReceiver() and
-      succ = getCallback(0).getParameter(2)
+    override predicate loadStoreStep(DataFlow::Node pred, DataFlow::SourceNode succ, string prop) {
+      exists(DataFlow::MethodCallNode call |
+        call.getMethodName() = ["map", "forEach"] and
+        prop = arrayElement() and
+        pred = call.getReceiver() and
+        succ = call.getCallback(0).getParameter(2)
+      )
     }
   }
 
@@ -311,16 +299,13 @@ private module ArrayDataFlow {
   /**
    * A step for modelling `for of` iteration on arrays.
    */
-  private class ForOfStep extends DataFlow::AdditionalFlowStep, DataFlow::ValueNode {
-    ForOfStmt forOf;
-    DataFlow::Node element;
-
-    ForOfStep() { this.asExpr() = forOf.getIterationDomain() }
-
+  private class ForOfStep extends PreCallGraphStep {
     override predicate loadStep(DataFlow::Node obj, DataFlow::Node e, string prop) {
-      obj = this and
-      e = DataFlow::lvalueNode(forOf.getLValue()) and
-      prop = arrayElement()
+      exists(ForOfStmt forOf |
+        obj = forOf.getIterationDomain().flow() and
+        e = DataFlow::lvalueNode(forOf.getLValue()) and
+        prop = arrayElement()
+      )
     }
   }
 }

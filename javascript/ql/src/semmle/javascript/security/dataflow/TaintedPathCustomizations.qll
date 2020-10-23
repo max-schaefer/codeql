@@ -55,7 +55,7 @@ module TaintedPath {
      * There are currently four flow labels, representing the different combinations of
      * normalization and absoluteness.
      */
-    class PosixPath extends DataFlow::FlowLabel {
+    abstract class PosixPath extends DataFlow::FlowLabel {
       Normalization normalization;
       Relativeness relativeness;
 
@@ -113,7 +113,7 @@ module TaintedPath {
     /**
      * A flow label representing an array of path elements that may include "..".
      */
-    class SplitPath extends DataFlow::FlowLabel {
+    abstract class SplitPath extends DataFlow::FlowLabel {
       SplitPath() { this = "splitPath" }
     }
   }
@@ -212,19 +212,18 @@ module TaintedPath {
     DataFlow::Node output;
 
     PreservingPathCall() {
-      exists(string name | name = "dirname" or name = "toNamespacedPath" |
-        this = NodeJSLib::Path::moduleMember(name).getACall() and
-        input = getAnArgument() and
-        output = this
-      )
+      this =
+        NodeJSLib::Path::moduleMember(["dirname", "toNamespacedPath", "parse", "format"]).getACall() and
+      input = getAnArgument() and
+      output = this
       or
       // non-global replace or replace of something other than /\.\./g, /[/]/g, or /[\.]/g.
-      this.getCalleeName() = "replace" and
+      this instanceof StringReplaceCall and
       input = getReceiver() and
       output = this and
       not exists(RegExpLiteral literal, RegExpTerm term |
-        getArgument(0).getALocalSource().asExpr() = literal and
-        literal.isGlobal() and
+        this.(StringReplaceCall).getRegExp().asExpr() = literal and
+        this.(StringReplaceCall).isGlobal() and
         literal.getRoot() = term
       |
         term.getAMatchedString() = "/" or
@@ -248,16 +247,15 @@ module TaintedPath {
   /**
    * A call that removes all instances of "../" in the prefix of the string.
    */
-  class DotDotSlashPrefixRemovingReplace extends DataFlow::CallNode {
+  class DotDotSlashPrefixRemovingReplace extends StringReplaceCall {
     DataFlow::Node input;
     DataFlow::Node output;
 
     DotDotSlashPrefixRemovingReplace() {
-      this.getCalleeName() = "replace" and
       input = getReceiver() and
       output = this and
       exists(RegExpLiteral literal, RegExpTerm term |
-        getArgument(0).getALocalSource().asExpr() = literal and
+        getRegExp().asExpr() = literal and
         (term instanceof RegExpStar or term instanceof RegExpPlus) and
         term.getChild(0) = getADotDotSlashMatcher()
       |
@@ -299,17 +297,16 @@ module TaintedPath {
   /**
    * A call that removes all "." or ".." from a path, without also removing all forward slashes.
    */
-  class DotRemovingReplaceCall extends DataFlow::CallNode {
+  class DotRemovingReplaceCall extends StringReplaceCall {
     DataFlow::Node input;
     DataFlow::Node output;
 
     DotRemovingReplaceCall() {
-      this.getCalleeName() = "replace" and
       input = getReceiver() and
       output = this and
+      isGlobal() and
       exists(RegExpLiteral literal, RegExpTerm term |
-        getArgument(0).getALocalSource().asExpr() = literal and
-        literal.isGlobal() and
+        getRegExp().asExpr() = literal and
         literal.getRoot() = term and
         not term.getAMatchedString() = "/"
       |
@@ -367,6 +364,20 @@ module TaintedPath {
         posixPath.isNormalized() and
         posixPath.isRelative()
       )
+    }
+  }
+
+  /**
+   * A check of the form `whitelist.includes(x)` or equivalent, which sanitizes `x` in its "then" branch.
+   */
+  class MembershipTestBarrierGuard extends BarrierGuardNode {
+    MembershipCandidate candidate;
+
+    MembershipTestBarrierGuard() { this = candidate.getTest() }
+
+    override predicate blocks(boolean outcome, Expr e) {
+      candidate = e.flow() and
+      candidate.getTestPolarity() = outcome
     }
   }
 
@@ -650,7 +661,8 @@ module TaintedPath {
     exists(DataFlow::PropRead read | read = dst |
       src = read.getBase() and
       read.getPropertyName() != "length" and
-      srclabel = dstlabel
+      srclabel = dstlabel and
+      not AccessPath::DominatingPaths::hasDominatingWrite(read)
     )
     or
     // string method calls of interest

@@ -68,6 +68,11 @@ class ClientRequest extends DataFlow::InvokeNode {
    * wrapped in a promise object.
    */
   DataFlow::Node getAResponseDataNode() { result = getAResponseDataNode(_, _) }
+
+  /**
+   * Gets a data-flow node that determines where in the file-system the result of the request should be saved.
+   */
+  DataFlow::Node getASavePath() { result = self.getASavePath() }
 }
 
 deprecated class CustomClientRequest = ClientRequest::Range;
@@ -103,6 +108,11 @@ module ClientRequest {
      * See the decription of `responseType` in `ClientRequest::getAResponseDataNode`.
      */
     DataFlow::Node getAResponseDataNode(string responseType, boolean promise) { none() }
+
+    /**
+     * Gets a data-flow node that determines where in the file-system the result of the request should be saved.
+     */
+    DataFlow::Node getASavePath() { none() }
   }
 
   /**
@@ -180,6 +190,14 @@ module ClientRequest {
     }
 
     override DataFlow::Node getADataNode() { result = getArgument(1) }
+
+    override DataFlow::Node getASavePath() {
+      exists(DataFlow::CallNode write |
+        write = DataFlow::moduleMember("fs", "createWriteStream").getACall() and
+        write = this.getAMemberCall("pipe").getArgument(0).getALocalSource() and
+        result = write.getArgument(0)
+      )
+    }
   }
 
   /** Gets the string `url` or `uri`. */
@@ -260,6 +278,23 @@ module ClientRequest {
     }
   }
 
+  /** An expression that is used as a credential in a request. */
+  private class AuthorizationHeader extends CredentialsExpr {
+    AuthorizationHeader() {
+      exists(DataFlow::PropWrite write | write.getPropertyName().regexpMatch("(?i)authorization") |
+        this = write.getRhs().asExpr()
+      )
+      or
+      exists(DataFlow::MethodCallNode call | call.getMethodName() = ["append", "set"] |
+        call.getNumArgument() = 2 and
+        call.getArgument(0).getStringValue().regexpMatch("(?i)authorization") and
+        this = call.getArgument(1).asExpr()
+      )
+    }
+
+    override string getCredentialsKind() { result = "authorization header" }
+  }
+
   /**
    * A model of a URL request made using an implementation of the `fetch` API.
    */
@@ -267,18 +302,14 @@ module ClientRequest {
     DataFlow::Node url;
 
     FetchUrlRequest() {
-      exists(string moduleName, DataFlow::SourceNode callee | this = callee.getACall() |
-        (
-          moduleName = "node-fetch" or
-          moduleName = "cross-fetch" or
-          moduleName = "isomorphic-fetch"
-        ) and
-        callee = DataFlow::moduleImport(moduleName) and
+      exists(DataFlow::SourceNode fetch |
+        fetch = DataFlow::moduleImport(["node-fetch", "cross-fetch", "isomorphic-fetch"])
+        or
+        fetch = DataFlow::globalVarRef("fetch") // https://fetch.spec.whatwg.org/#fetch-api
+      |
+        this = fetch.getACall() and
         url = getArgument(0)
       )
-      or
-      this = DataFlow::globalVarRef("fetch").getACall() and
-      url = getArgument(0)
     }
 
     override DataFlow::Node getUrl() { result = url }
@@ -293,6 +324,85 @@ module ClientRequest {
       responseType = "fetch.response" and
       promise = true and
       result = this
+    }
+  }
+
+  /**
+   * Classes for modelling the url request library `needle`.
+   */
+  private module Needle {
+    /**
+     * A model of a URL request made using `require("needle")(...)`.
+     */
+    class PromisedNeedleRequest extends ClientRequest::Range {
+      DataFlow::Node url;
+
+      PromisedNeedleRequest() { this = DataFlow::moduleImport("needle").getACall() }
+
+      override DataFlow::Node getUrl() { result = getArgument(1) }
+
+      override DataFlow::Node getHost() { none() }
+
+      override DataFlow::Node getADataNode() {
+        result = getOptionArgument([2, 3], "headers")
+        or
+        result = getArgument(2)
+      }
+
+      override DataFlow::Node getAResponseDataNode(string responseType, boolean promise) {
+        responseType = "fetch.response" and
+        promise = true and
+        result = this
+      }
+    }
+
+    /**
+     * A model of a URL request made using `require("needle")[method](...)`.
+     * E.g. `needle.get("http://example.org", (err, resp, body) => {})`.
+     *
+     * As opposed to the calls modeled in `PromisedNeedleRequest` these calls do not return promises.
+     * Instead they take an optional callback as their last argument.
+     */
+    class NeedleMethodRequest extends ClientRequest::Range {
+      boolean hasData;
+
+      NeedleMethodRequest() {
+        exists(string method |
+          method = ["get", "head"] and hasData = false
+          or
+          method = ["post", "put", "patch", "delete"] and hasData = true
+          or
+          method = "request" and hasData = [true, false]
+        |
+          this = DataFlow::moduleMember("needle", method).getACall()
+        )
+      }
+
+      override DataFlow::Node getUrl() { result = getArgument(0) }
+
+      override DataFlow::Node getHost() { none() }
+
+      override DataFlow::Node getADataNode() {
+        hasData = true and
+        (
+          result = getArgument(1)
+          or
+          result = getOptionArgument(2, "headers")
+        )
+        or
+        hasData = false and
+        result = getOptionArgument(1, "headers")
+      }
+
+      override DataFlow::Node getAResponseDataNode(string responseType, boolean promise) {
+        promise = false and
+        result = this.getABoundCallbackParameter(this.getNumArgument() - 1, 1) and
+        responseType = "fetch.response"
+        or
+        promise = false and
+        result = this.getABoundCallbackParameter(this.getNumArgument() - 1, 2) and
+        responseType = "json"
+      }
     }
   }
 
@@ -355,6 +465,53 @@ module ClientRequest {
           responseType = "text" and
           promise = true
         )
+    }
+  }
+
+  /**
+   * Gets an instantiation `socket` of `require("net").Socket` type tracked using `t`.
+   */
+  private DataFlow::SourceNode netSocketInstantiation(
+    DataFlow::TypeTracker t, DataFlow::NewNode socket
+  ) {
+    t.start() and
+    socket = DataFlow::moduleMember("net", "Socket").getAnInstantiation() and
+    result = socket
+    or
+    exists(DataFlow::TypeTracker t2 | result = netSocketInstantiation(t2, socket).track(t2, t))
+  }
+
+  /**
+   * A model of a request made using `(new require("net").Socket()).connect(args);`.
+   */
+  class NetSocketRequest extends ClientRequest::Range {
+    DataFlow::NewNode socket;
+
+    NetSocketRequest() {
+      this = netSocketInstantiation(DataFlow::TypeTracker::end(), socket).getAMethodCall("connect")
+    }
+
+    override DataFlow::Node getUrl() {
+      result = getArgument([0, 1]) // there are multiple overrides of `connect`, and the URL can be in the first or second argument.
+    }
+
+    override DataFlow::Node getHost() { result = getOptionArgument(0, "host") }
+
+    override DataFlow::Node getAResponseDataNode(string responseType, boolean promise) {
+      responseType = "text" and
+      promise = false and
+      exists(DataFlow::CallNode call |
+        call = netSocketInstantiation(DataFlow::TypeTracker::end(), socket).getAMemberCall("on") and
+        call.getArgument(0).mayHaveStringValue("data") and
+        result = call.getABoundCallbackParameter(1, 0)
+      )
+    }
+
+    override DataFlow::Node getADataNode() {
+      exists(DataFlow::CallNode call |
+        call = netSocketInstantiation(DataFlow::TypeTracker::end(), socket).getAMemberCall("write") and
+        result = call.getArgument(0)
+      )
     }
   }
 
@@ -601,6 +758,51 @@ module ClientRequest {
 
     override DataFlow::Node getUrl() {
       result = getArgument(optionsArg).getALocalSource().getAPropertyWrite("url").getRhs()
+    }
+
+    override DataFlow::Node getHost() { none() }
+
+    override DataFlow::Node getADataNode() { none() }
+  }
+
+  /**
+   * A call to `nugget` that downloads one of more files to a destination determined by an options object given as the second argument.
+   */
+  class Nugget extends ClientRequest::Range, DataFlow::CallNode {
+    Nugget() { this = DataFlow::moduleImport("nugget").getACall() }
+
+    override DataFlow::Node getUrl() { result = getArgument(0) }
+
+    override DataFlow::Node getHost() { none() }
+
+    override DataFlow::Node getADataNode() { none() }
+
+    override DataFlow::Node getASavePath() {
+      result = this.getArgument(1).getALocalSource().getAPropertyWrite("target").getRhs()
+    }
+  }
+
+  /**
+   * A shell execution of `curl` that downloads some file.
+   */
+  class CurlDownload extends ClientRequest::Range {
+    SystemCommandExecution cmd;
+
+    CurlDownload() {
+      this = cmd and
+      (
+        cmd.getACommandArgument().getStringValue() = "curl" or
+        cmd
+            .getACommandArgument()
+            .(StringOps::ConcatenationRoot)
+            .getConstantStringParts()
+            .regexpMatch("curl .*")
+      )
+    }
+
+    override DataFlow::Node getUrl() {
+      result = cmd.getArgumentList().getALocalSource().getAPropertyWrite().getRhs() or
+      result = cmd.getACommandArgument().(StringOps::ConcatenationRoot).getALeaf()
     }
 
     override DataFlow::Node getHost() { none() }

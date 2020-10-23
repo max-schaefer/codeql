@@ -99,9 +99,8 @@ The most important subclasses of `AstNode
 statements and expressions, respectively. This section briefly discusses some of their more
 important subclasses and predicates. For a full reference of all the subclasses of `Stmt
 <https://help.semmle.com/qldoc/go/semmle/go/Stmt.qll/type.Stmt$Stmt.html>`__ and `Expr
-<https://help.semmle.com/qldoc/go/semmle/go/Expr.qll/type.Expr$Expr.html>`__ and their API, see
-`Stmt.qll <https://help.semmle.com/qldoc/go/semmle/go/Stmt.qll/module.Stmt.html>`__ and `Expr.qll
-<https://help.semmle.com/qldoc/go/semmle/go/Expr.qll/module.Expr.html>`__.
+<https://help.semmle.com/qldoc/go/semmle/go/Expr.qll/type.Expr$Expr.html>`__, see
+:doc:`Abstract syntax tree classes for Go <ast-class-reference>`.
 
 Statements
 ~~~~~~~~~~
@@ -503,7 +502,7 @@ taint, you can define a subclass of ``TaintTracking::Configuration``, which work
 data-flow configurations.
 
 A detailed exposition of global data flow and taint tracking is out of scope for this brief
-introduction. For a general overview of data flow and taint tracking, see `About data flow analysis <https://help.semmle.com/QL/learn-ql/intro-to-data-flow.html>`__.
+introduction. For a general overview of data flow and taint tracking, see "`About data flow analysis <https://help.semmle.com/QL/learn-ql/intro-to-data-flow.html>`__."
 
 Advanced libraries
 ------------------
@@ -555,7 +554,7 @@ fact that ``p != nil`` is ``true`` at this point:
 
 |cfg2|
 
-A typical use of this information would be in an analyis that looks for ``nil`` dereferences: such
+A typical use of this information would be in an analysis that looks for ``nil`` dereferences: such
 an analysis would be able to conclude that the field read ``p.f`` is safe because it is immediately
 preceded by a condition guard node guaranteeing that ``p`` is not ``nil``.
 

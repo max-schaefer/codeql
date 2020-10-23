@@ -78,7 +78,7 @@ module DOM {
   /**
    * A JSX element, viewed as an `ElementDefinition`.
    */
-  private class JsxElementDefinition extends ElementDefinition, @jsxelement {
+  private class JsxElementDefinition extends ElementDefinition, @jsx_element {
     JsxElementDefinition() { this instanceof JSXElement }
 
     override string getName() { result = this.(JSXElement).getName() }
@@ -291,11 +291,27 @@ module DOM {
      */
     abstract class Range extends DataFlow::Node { }
 
+    private string getADomPropertyName() {
+      exists(ExternalInstanceMemberDecl decl |
+        result = decl.getName() and
+        isDomRootType(decl.getDeclaringType().getASupertype*())
+      )
+    }
+
     private class DefaultRange extends Range {
       DefaultRange() {
         this.asExpr().(VarAccess).getVariable() instanceof DOMGlobalVariable
         or
-        this = domValueRef().getAPropertyRead()
+        exists(DataFlow::PropRead read |
+          this = read and
+          read = domValueRef().getAPropertyRead()
+        |
+          not read.mayHavePropertyName(_)
+          or
+          read.mayHavePropertyName(getADomPropertyName())
+          or
+          read.mayHavePropertyName(any(string s | exists(s.toInt())))
+        )
         or
         this = domElementCreationOrQuery()
         or
@@ -324,11 +340,18 @@ module DOM {
     t.start() and
     result = domValueSource()
     or
+    t.start() and
+    result = domValueRef().getAMethodCall(["item", "namedItem"])
+    or
     exists(DataFlow::TypeTracker t2 | result = domValueRef(t2).track(t2, t))
   }
 
   /** Gets a data flow node that may refer to a value from the DOM. */
-  DataFlow::SourceNode domValueRef() { result = domValueRef(DataFlow::TypeTracker::end()) }
+  DataFlow::SourceNode domValueRef() {
+    result = domValueRef(DataFlow::TypeTracker::end())
+    or
+    result.hasUnderlyingType("Element")
+  }
 
   module LocationSource {
     /**
@@ -400,5 +423,9 @@ module DOM {
   /**
    * Gets a reference to the 'document' object.
    */
-  DataFlow::SourceNode documentRef() { result = documentRef(DataFlow::TypeTracker::end()) }
+  DataFlow::SourceNode documentRef() {
+    result = documentRef(DataFlow::TypeTracker::end())
+    or
+    result.hasUnderlyingType("Document")
+  }
 }

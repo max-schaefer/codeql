@@ -5,7 +5,7 @@
  * a `null` pointer exception (`NullReferenceException`) may be thrown.
  * Example:
  *
- * ```
+ * ```csharp
  * void M(string s) {
  *   if (s != null) {
  *     ...
@@ -21,10 +21,8 @@ import csharp
 private import ControlFlow
 private import internal.CallableReturns
 private import semmle.code.csharp.commons.Assertions
-private import semmle.code.csharp.commons.ComparisonTest
 private import semmle.code.csharp.controlflow.Guards as G
 private import semmle.code.csharp.controlflow.Guards::AbstractValues
-private import semmle.code.csharp.dataflow.SSA
 private import semmle.code.csharp.frameworks.System
 private import semmle.code.csharp.frameworks.Test
 
@@ -139,30 +137,6 @@ private predicate exprImpliesSsaDef(
 }
 
 /**
- * Holds if the `i`th node of basic block `bb` ensures that SSA definition
- * `def` is not `null` in any subsequent uses.
- */
-private predicate ensureNotNullAt(BasicBlock bb, int i, Ssa::Definition def) {
-  exists(Expr e, G::AbstractValue v, NullValue nv |
-    G::Internal::asserts(bb.getNode(i).getElement(), e, v)
-  |
-    exprImpliesSsaDef(e, v, def, nv) and
-    nv.isNonNull()
-  )
-}
-
-/**
- * Holds if the `i`th node of basic block `bb` is a dereference `d` of SSA
- * definition `def`, and `def` may potentially be `null`.
- */
-private predicate potentialNullDereferenceAt(
-  BasicBlock bb, int i, Ssa::Definition def, Dereference d
-) {
-  dereferenceAt(bb, i, def, d) and
-  not exists(int j | ensureNotNullAt(bb, j, def) | j < i)
-}
-
-/**
  * Gets an element that tests whether a given SSA definition, `def`, is
  * `null` or not.
  *
@@ -197,42 +171,44 @@ private predicate isNullDefaultArgument(Ssa::ExplicitDefinition def, AlwaysNullE
 
 /** Holds if `def` is an SSA definition that may be `null`. */
 private predicate defMaybeNull(Ssa::Definition def, string msg, Element reason) {
-  // A variable compared to `null` might be `null`
-  exists(G::DereferenceableExpr de | de = def.getARead() |
-    reason = de.getANullCheck(_, true) and
-    msg = "as suggested by $@ null check" and
-    not de = any(Ssa::PseudoDefinition pdef).getARead() and
-    strictcount(Element e | e = any(Ssa::Definition def0 | de = def0.getARead()).getElement()) = 1 and
-    not nonNullDef(def) and
-    // Don't use a check as reason if there is a `null` assignment
-    // or argument
-    not def.(Ssa::ExplicitDefinition).getADefinition().getSource() instanceof MaybeNullExpr and
-    not isMaybeNullArgument(def, _)
-  )
-  or
-  // A parameter might be `null` if there is a `null` argument somewhere
-  isMaybeNullArgument(def, reason) and
+  not nonNullDef(def) and
   (
-    if reason instanceof AlwaysNullExpr
-    then msg = "because of $@ null argument"
-    else msg = "because of $@ potential null argument"
-  )
-  or
-  isNullDefaultArgument(def, reason) and msg = "because the parameter has a null default value"
-  or
-  // If the source of a variable is `null` then the variable may be `null`
-  exists(AssignableDefinition adef | adef = def.(Ssa::ExplicitDefinition).getADefinition() |
-    adef.getSource() instanceof MaybeNullExpr and
-    reason = adef.getExpr() and
-    msg = "because of $@ assignment"
-  )
-  or
-  // A variable of nullable type may be null
-  exists(Dereference d | dereferenceAt(_, _, def, d) |
-    d.hasNullableType() and
-    not def instanceof Ssa::PseudoDefinition and
-    reason = def.getSourceVariable().getAssignable() and
-    msg = "because it has a nullable type"
+    // A variable compared to `null` might be `null`
+    exists(G::DereferenceableExpr de | de = def.getARead() |
+      reason = de.getANullCheck(_, true) and
+      msg = "as suggested by $@ null check" and
+      not de = any(Ssa::PseudoDefinition pdef).getARead() and
+      strictcount(Element e | e = any(Ssa::Definition def0 | de = def0.getARead()).getElement()) = 1 and
+      // Don't use a check as reason if there is a `null` assignment
+      // or argument
+      not def.(Ssa::ExplicitDefinition).getADefinition().getSource() instanceof MaybeNullExpr and
+      not isMaybeNullArgument(def, _)
+    )
+    or
+    // A parameter might be `null` if there is a `null` argument somewhere
+    isMaybeNullArgument(def, reason) and
+    (
+      if reason instanceof AlwaysNullExpr
+      then msg = "because of $@ null argument"
+      else msg = "because of $@ potential null argument"
+    )
+    or
+    isNullDefaultArgument(def, reason) and msg = "because the parameter has a null default value"
+    or
+    // If the source of a variable is `null` then the variable may be `null`
+    exists(AssignableDefinition adef | adef = def.(Ssa::ExplicitDefinition).getADefinition() |
+      adef.getSource() instanceof MaybeNullExpr and
+      reason = adef.getExpr() and
+      msg = "because of $@ assignment"
+    )
+    or
+    // A variable of nullable type may be null
+    exists(Dereference d | dereferenceAt(_, _, def, d) |
+      d.hasNullableType() and
+      not def instanceof Ssa::PseudoDefinition and
+      reason = def.getSourceVariable().getAssignable() and
+      msg = "because it has a nullable type"
+    )
   )
 }
 
@@ -269,7 +245,6 @@ private predicate defNullImpliesStep(
       bb2 = def.getBasicBlock()
     )
   ) and
-  not ensureNotNullAt(bb1, _, def1) and
   not exists(SuccessorTypes::ConditionalSuccessor s, NullValue nv |
     bb1.getLastNode() = getANullCheck(def1, s, nv).getAControlFlowNode()
   |
@@ -296,7 +271,7 @@ private predicate defMaybeNullInBlock(Ssa::Definition def, BasicBlock bb) {
  * dereference.
  */
 private predicate nullDerefCandidateVariable(Ssa::SourceVariable v) {
-  exists(Ssa::Definition def, BasicBlock bb | potentialNullDereferenceAt(bb, _, def, _) |
+  exists(Ssa::Definition def, BasicBlock bb | dereferenceAt(bb, _, def, _) |
     defMaybeNullInBlock(def, bb) and
     v = def.getSourceVariable()
   )
@@ -328,7 +303,7 @@ private newtype TPathNode =
     succNullArgument(_, def, bb)
   } or
   TSinkPathNode(Ssa::Definition def, BasicBlock bb, int i, Dereference d) {
-    potentialNullDereferenceAt(bb, i, def, d) and
+    dereferenceAt(bb, i, def, d) and
     (
       succStep(_, def, bb)
       or

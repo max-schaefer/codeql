@@ -16,8 +16,8 @@ private import NodeModuleResolutionImpl
  */
 class NodeModule extends Module {
   NodeModule() {
-    isModule(this) and
-    isNodejs(this)
+    is_module(this) and
+    is_nodejs(this)
   }
 
   /** Gets the `module` variable of this module. */
@@ -42,22 +42,64 @@ class NodeModule extends Module {
     )
   }
 
-  /** Gets a symbol exported by this module. */
-  override string getAnExportedSymbol() {
-    result = super.getAnExportedSymbol() or
-    result = getAnImplicitlyExportedSymbol()
+  /**
+   * Gets an expression that is an alias for `module.exports`.
+   * For performance this predicate only computes relevant expressions.
+   * So if using this predicate - consider expanding the list of relevant expressions.
+   */
+  pragma[noinline]
+  DataFlow::Node getAModuleExportsNode() {
+    (
+      // A bit of manual magic
+      result = any(DataFlow::PropWrite w | exists(w.getPropertyName())).getBase()
+      or
+      result = DataFlow::valueNode(any(PropAccess p | exists(p.getPropertyName())).getBase())
+      or
+      result = DataFlow::valueNode(any(ObjectExpr obj))
+    ) and
+    result.analyze().getAValue() = getAModuleExportsValue()
   }
 
-  override predicate exports(string name, ASTNode export) {
+  /** Gets a symbol exported by this module. */
+  override string getAnExportedSymbol() {
+    result = super.getAnExportedSymbol()
+    or
+    result = getAnImplicitlyExportedSymbol()
+    or
+    // getters and the like.
+    exists(DataFlow::PropWrite pwn |
+      pwn.getBase() = this.getAModuleExportsNode() and
+      result = pwn.getPropertyName()
+    )
+  }
+
+  override DataFlow::Node getAnExportedValue(string name) {
     // a property write whose base is `exports` or `module.exports`
-    exists(DataFlow::PropWrite pwn | export = pwn.getAstNode() |
-      pwn.getBase().analyze().getAValue() = getAModuleExportsValue() and
+    exists(DataFlow::PropWrite pwn | result = pwn.getRhs() |
+      pwn.getBase() = getAModuleExportsNode() and
       name = pwn.getPropertyName()
     )
     or
+    // a re-export using spread-operator. E.g. `const foo = require("./foo"); module.exports = {bar: bar, ...foo};`
+    exists(ObjectExpr obj | obj = getAModuleExportsNode().asExpr() |
+      result =
+        obj
+            .getAProperty()
+            .(SpreadProperty)
+            .getInit()
+            .(SpreadElement)
+            .getOperand()
+            .flow()
+            .getALocalSource()
+            .asExpr()
+            .(Import)
+            .getImportedModule()
+            .getAnExportedValue(name)
+    )
+    or
     // an externs definition (where appropriate)
-    exists(PropAccess pacc | export = pacc |
-      pacc.getBase().analyze().getAValue() = getAModuleExportsValue() and
+    exists(PropAccess pacc | result = DataFlow::valueNode(pacc) |
+      pacc.getBase() = getAModuleExportsNode().asExpr() and
       name = pacc.getPropertyName() and
       isExterns() and
       exists(pacc.getDocumentation())
@@ -162,6 +204,17 @@ private predicate isRequire(DataFlow::Node nd) {
   not nd.getFile().getExtension() = "mjs"
   or
   isRequire(nd.getAPredecessor())
+  or
+  // `import { createRequire } from 'module';` support.
+  // specialized to ES2015 modules to avoid recursion in the `DataFlow::moduleImport()` predicate.
+  exists(ImportDeclaration imp | imp.getImportedPath().getValue() = "module" |
+    nd =
+      imp
+          .getImportedModuleNode()
+          .(DataFlow::SourceNode)
+          .getAPropertyRead("createRequire")
+          .getACall()
+  )
 }
 
 /**
@@ -221,7 +274,7 @@ class Require extends CallExpr, Import {
    *
    * <ul>
    * <li> the file `c/p`;
-   * <li> the file `c/p.{tsx,ts,jsx,es6,es,mjs}`;
+   * <li> the file `c/p.{tsx,ts,jsx,es6,es,mjs,cjs}`;
    * <li> the file `c/p.js`;
    * <li> the file `c/p.json`;
    * <li> the file `c/p.node`;
@@ -230,12 +283,12 @@ class Require extends CallExpr, Import {
    *      <li> if `c/p/package.json` exists and specifies a `main` module `m`:
    *        <ul>
    *        <li> the file `c/p/m`;
-   *        <li> the file `c/p/m.{tsx,ts,jsx,es6,es,mjs}`;
+   *        <li> the file `c/p/m.{tsx,ts,jsx,es6,es,mjs,cjs}`;
    *        <li> the file `c/p/m.js`;
    *        <li> the file `c/p/m.json`;
    *        <li> the file `c/p/m.node`;
    *        </ul>
-   *      <li> the file `c/p/index.{tsx,ts,jsx,es6,es,mjs}`;
+   *      <li> the file `c/p/index.{tsx,ts,jsx,es6,es,mjs,cjs}`;
    *      <li> the file `c/p/index.js`;
    *      <li> the file `c/p/index.json`;
    *      <li> the file `c/p/index.node`.
@@ -303,7 +356,7 @@ private class FileNamePath extends PathExpr, VarAccess {
  * A path expression of the form `path.join(p, "...")` where
  * `p` is also a path expression.
  */
-private class JoinedPath extends PathExpr, @callexpr {
+private class JoinedPath extends PathExpr, @call_expr {
   JoinedPath() {
     exists(MethodCallExpr call | call = this |
       call.getReceiver().(VarAccess).getName() = "path" and

@@ -1,4 +1,5 @@
 /**
+ * @deprecated
  * @name Mostly duplicate class
  * @description More than 80% of the methods in this class are duplicated in another class. Create a common supertype to improve code sharing.
  * @kind problem
@@ -19,7 +20,7 @@ import CodeDuplication
 
 from Class c, Class other, string message
 where
-    duplicateScopes(c, other, _, message) and
-    count(c.getAStmt()) > 3 and
-    not duplicateScopes(c.getEnclosingModule(), _, _, _)
+  duplicateScopes(c, other, _, message) and
+  count(c.getAStmt()) > 3 and
+  not duplicateScopes(c.getEnclosingModule(), _, _, _)
 select c, message, other, other.getName()

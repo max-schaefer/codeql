@@ -1,5 +1,4 @@
-﻿using Microsoft.DiaSymReader;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection.Metadata;
@@ -16,12 +15,12 @@ namespace Semmle.Extraction.PDB
         /// <summary>
         /// The byte-offset of the instruction.
         /// </summary>
-        public readonly int Offset;
+        public int Offset { get; }
 
         /// <summary>
         /// The source location of the instruction.
         /// </summary>
-        public readonly Location Location;
+        public Location Location { get; }
 
         public override string ToString()
         {
@@ -43,23 +42,36 @@ namespace Semmle.Extraction.PDB
         /// <summary>
         /// The file containing the code.
         /// </summary>
-        public readonly ISourceFile File;
+        public ISourceFile File { get; }
 
         /// <summary>
-        /// The span of text within the text file.
+        /// The start line of text within the source file.
         /// </summary>
-        public readonly int StartLine, StartColumn, EndLine, EndColumn;
+        public int StartLine { get; }
+
+        /// <summary>
+        /// The start column of text within the source file.
+        /// </summary>
+        public int StartColumn { get; }
+
+        /// <summary>
+        /// The end line of text within the source file.
+        /// </summary>
+        public int EndLine { get; }
+
+        /// <summary>
+        /// The end column of text within the source file.
+        /// </summary>
+        public int EndColumn { get; }
 
         public override string ToString()
         {
             return string.Format("({0},{1})-({2},{3})", StartLine, StartColumn, EndLine, EndColumn);
         }
 
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
-            var otherLocation = obj as Location;
-
-            return otherLocation != null &&
+            return obj is Location otherLocation &&
                 File.Equals(otherLocation.File) &&
                 StartLine == otherLocation.StartLine &&
                 StartColumn == otherLocation.StartColumn &&
@@ -89,9 +101,14 @@ namespace Semmle.Extraction.PDB
         Location Location { get; }
     }
 
-    class Method : IMethod
+    internal class Method : IMethod
     {
-        public IEnumerable<SequencePoint> SequencePoints { get; set; }
+        public IEnumerable<SequencePoint> SequencePoints { get; }
+
+        public Method(IEnumerable<SequencePoint> sequencePoints)
+        {
+            SequencePoints = sequencePoints;
+        }
 
         public Location Location => SequencePoints.First().Location;
     }
@@ -111,7 +128,7 @@ namespace Semmle.Extraction.PDB
         /// null if the contents are unavailable.
         /// E.g. if the PDB file exists but the corresponding source files are missing.
         /// </summary>
-        string Contents { get; }
+        string? Contents { get; }
     }
 
     /// <summary>
@@ -131,21 +148,21 @@ namespace Semmle.Extraction.PDB
         /// </summary>
         /// <param name="methodHandle">The handle to query.</param>
         /// <returns>The method information, or null if the method does not have debug information.</returns>
-        IMethod GetMethod(MethodDebugInformationHandle methodHandle);
+        IMethod? GetMethod(MethodDebugInformationHandle methodHandle);
     }
 
-    class PdbReader
+    internal class PdbReader
     {
         /// <summary>
         /// Returns the PDB information associated with an assembly.
         /// </summary>
         /// <param name="assemblyPath">The path to the assembly.</param>
-        /// <param name="peReader">The PE reader for the assembky.</param>
+        /// <param name="peReader">The PE reader for the assembly.</param>
         /// <returns>A PdbReader, or null if no PDB information is available.</returns>
-        public static IPdb Create(string assemblyPath, PEReader peReader)
+        public static IPdb? Create(string assemblyPath, PEReader peReader)
         {
-            return (IPdb)MetadataPdbReader.CreateFromAssembly(assemblyPath, peReader) ??
-                NativePdbReader.CreateFromAssembly(assemblyPath, peReader);
+            return (IPdb?)MetadataPdbReader.CreateFromAssembly(assemblyPath, peReader) ??
+                NativePdbReader.CreateFromAssembly(peReader);
         }
     }
 }

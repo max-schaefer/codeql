@@ -52,7 +52,7 @@ class Assertion extends MethodCall {
    * Moreover, this assertion corresponds to multiple control flow nodes,
    * which is why
    *
-   * ```
+   * ```ql
    * exists(BasicBlock bb |
    *   bb.getANode() = this.getAControlFlowNode() |
    *   bb.immediatelyDominates(succ)
@@ -62,7 +62,7 @@ class Assertion extends MethodCall {
    * does not work.
    */
   pragma[nomagic]
-  private predicate immediatelyDominatesBlockSplit(BasicBlock succ) {
+  deprecated private predicate immediatelyDominatesBlockSplit(BasicBlock succ) {
     // Only calculate dominance by explicit recursion for split nodes;
     // all other nodes can use regular CFG dominance
     this instanceof ControlFlow::Internal::SplitControlFlowElement and
@@ -78,11 +78,11 @@ class Assertion extends MethodCall {
   }
 
   pragma[noinline]
-  private predicate strictlyDominatesJoinBlockPredecessor(JoinBlock jb, int i) {
+  deprecated private predicate strictlyDominatesJoinBlockPredecessor(JoinBlock jb, int i) {
     this.strictlyDominatesSplit(jb.getJoinBlockPredecessor(i))
   }
 
-  private predicate strictlyDominatesJoinBlockSplit(JoinBlock jb, int i) {
+  deprecated private predicate strictlyDominatesJoinBlockSplit(JoinBlock jb, int i) {
     i = -1 and
     this.strictlyDominatesJoinBlockPredecessor(jb, _)
     or
@@ -95,12 +95,12 @@ class Assertion extends MethodCall {
   }
 
   pragma[nomagic]
-  private predicate strictlyDominatesSplit(BasicBlock bb) {
+  deprecated private predicate strictlyDominatesSplit(BasicBlock bb) {
     this.immediatelyDominatesBlockSplit(bb)
     or
     // Equivalent with
     //
-    // ```
+    // ```ql
     // exists(JoinBlockPredecessor pred | pred = bb.getAPredecessor() |
     //   this.strictlyDominatesSplit(pred)
     // ) and
@@ -121,6 +121,8 @@ class Assertion extends MethodCall {
   }
 
   /**
+   * DEPRECATED: Use `getExpr().controlsBlock()` instead.
+   *
    * Holds if this assertion strictly dominates basic block `bb`. That is, `bb`
    * can only be reached from the callable entry point by going via *some* basic
    * block containing this element.
@@ -130,7 +132,7 @@ class Assertion extends MethodCall {
    * in that it takes control flow splitting into account.
    */
   pragma[nomagic]
-  predicate strictlyDominates(BasicBlock bb) {
+  deprecated predicate strictlyDominates(BasicBlock bb) {
     this.strictlyDominatesSplit(bb)
     or
     this.getAControlFlowNode().getBasicBlock().strictlyDominates(bb)
@@ -288,7 +290,7 @@ class ForwarderAssertMethod extends AssertMethod {
   ForwarderAssertMethod() {
     p = this.getAParameter() and
     strictcount(AssignableDefinition def | def.getTarget() = p) = 1 and
-    forex(ControlFlowElement body | body = this.getABody() |
+    forex(ControlFlowElement body | body = this.getBody() |
       bodyAsserts(this, body, a) and
       a.getExpr() = p.getAnAccess()
     )
@@ -306,7 +308,7 @@ class ForwarderAssertMethod extends AssertMethod {
 
 pragma[noinline]
 private predicate bodyAsserts(Callable c, ControlFlowElement body, Assertion a) {
-  c.getABody() = body and
+  c.getBody() = body and
   body = getAnAssertingElement(a)
 }
 

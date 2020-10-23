@@ -1,15 +1,11 @@
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Semmle.Extraction.CSharp.Populators;
 using Semmle.Extraction.Kinds;
 
 namespace Semmle.Extraction.CSharp.Entities.Expressions
 {
-    class MemberAccess : Expression
+    internal class MemberAccess : Expression
     {
-        readonly IEntity Target;
-
         private MemberAccess(ExpressionNodeInfo info, ExpressionSyntax qualifier, ISymbol target) : base(info)
         {
             var trapFile = info.Context.TrapWriter.Writer;
@@ -22,15 +18,17 @@ namespace Semmle.Extraction.CSharp.Entities.Expressions
             }
             else
             {
-                Target = cx.CreateEntity(target);
-                trapFile.expr_access(this, Target);
+                var t = cx.CreateEntity(target);
+                trapFile.expr_access(this, t);
             }
         }
 
-        public static Expression Create(ExpressionNodeInfo info, ConditionalAccessExpressionSyntax node) =>
+        public static Expression Create(ExpressionNodeInfo info, ConditionalAccessExpressionSyntax node)
+        {
             // The qualifier is located by walking the syntax tree.
             // `node.WhenNotNull` will contain a MemberBindingExpressionSyntax, calling the method below.
-            CreateFromNode(new ExpressionNodeInfo(info.Context, node.WhenNotNull, info.Parent, info.Child, info.TypeInfo));
+            return CreateFromNode(new ExpressionNodeInfo(info.Context, node.WhenNotNull, info.Parent, info.Child, info.TypeInfo));
+        }
 
         public static Expression Create(ExpressionNodeInfo info, MemberBindingExpressionSyntax node)
         {
@@ -42,7 +40,7 @@ namespace Semmle.Extraction.CSharp.Entities.Expressions
         public static Expression Create(ExpressionNodeInfo info, MemberAccessExpressionSyntax node) =>
             Create(info, node.Expression, node.Name);
 
-        static Expression Create(ExpressionNodeInfo info, ExpressionSyntax expression, SimpleNameSyntax name)
+        private static Expression Create(ExpressionNodeInfo info, ExpressionSyntax expression, SimpleNameSyntax name)
         {
             if (IsDynamic(info.Context, expression))
             {

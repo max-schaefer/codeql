@@ -10,8 +10,8 @@ namespace Semmle.Extraction.CIL.Entities
 
     public sealed class PdbSourceLocation : LabelledEntity, ISourceLocation
     {
-        readonly Location location;
-        readonly PdbSourceFile file;
+        private readonly Location location;
+        private readonly PdbSourceFile file;
 
         public PdbSourceLocation(Context cx, PDB.Location location) : base(cx)
         {
@@ -32,7 +32,7 @@ namespace Semmle.Extraction.CIL.Entities
             trapFile.Write(location.EndColumn);
         }
 
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             return obj is PdbSourceLocation l && location.Equals(l.location);
         }

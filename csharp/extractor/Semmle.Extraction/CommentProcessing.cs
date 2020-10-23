@@ -11,7 +11,7 @@ namespace Semmle.Extraction.CommentProcessing
     /// Registers locations of comments and program elements,
     /// then generates binding information.
     /// </summary>
-    class CommentProcessor : ICommentGenerator
+    internal class CommentProcessor : ICommentGenerator
     {
         public void AddComment(ICommentLine comment)
         {
@@ -33,9 +33,9 @@ namespace Semmle.Extraction.CommentProcessing
             return null;
         }
 
-        class LocationComparer : IComparer<Location>
+        private class LocationComparer : IComparer<Location>
         {
-            public int Compare(Location l1, Location l2) => CommentProcessor.Compare(l1, l2);
+            public int Compare(Location? l1, Location? l2) => CommentProcessor.Compare(l1, l2);
         }
 
         /// <summary>
@@ -44,12 +44,21 @@ namespace Semmle.Extraction.CommentProcessing
         /// <param name="l1">First location</param>
         /// <param name="l2">Second location</param>
         /// <returns>&lt;0 if l1 before l2, &gt;0 if l1 after l2, else 0.</returns>
-        static int Compare(Location l1, Location l2)
+        private static int Compare(Location? l1, Location? l2)
         {
-            int diff = l1.SourceTree == l2.SourceTree ? 0 : l1.SourceTree.FilePath.CompareTo(l2.SourceTree.FilePath);
-            if (diff != 0) return diff;
+            if (object.ReferenceEquals(l1, l2))
+                return 0;
+            if (l1 == null)
+                return -1;
+            if (l2 == null)
+                return 1;
+
+            var diff = l1.SourceTree == l2.SourceTree ? 0 : l1.SourceTree.FilePath.CompareTo(l2.SourceTree.FilePath);
+            if (diff != 0)
+                return diff;
             diff = l1.SourceSpan.Start - l2.SourceSpan.Start;
-            if (diff != 0) return diff;
+            if (diff != 0)
+                return diff;
             return l1.SourceSpan.End - l2.SourceSpan.End;
         }
 
@@ -69,7 +78,7 @@ namespace Semmle.Extraction.CommentProcessing
 
         // Ensure that commentBlock and element refer to the same file
         // which can happen when processing multiple files.
-        void EnsureSameFile(ICommentBlock commentBlock, ref KeyValuePair<Location, Label>? element)
+        private static void EnsureSameFile(ICommentBlock commentBlock, ref KeyValuePair<Location, Label>? element)
         {
             if (element != null && element.Value.Key.SourceTree != commentBlock.Location.SourceTree)
                 element = null;
@@ -85,7 +94,7 @@ namespace Semmle.Extraction.CommentProcessing
         /// <param name="nextElement">The element after the comment block.</param>
         /// <param name="parentElement">The parent element of the comment block.</param>
         /// <param name="callback">Output binding information.</param>
-        void GenerateBindings(
+        private void GenerateBindings(
             ICommentBlock commentBlock,
             KeyValuePair<Location, Label>? previousElement,
             KeyValuePair<Location, Label>? nextElement,
@@ -171,7 +180,7 @@ namespace Semmle.Extraction.CommentProcessing
         private class ElementStack
         {
             // Invariant: the top of the stack must be contained by items below it.
-            readonly Stack<KeyValuePair<Location, Label>> elementStack = new Stack<KeyValuePair<Location, Label>>();
+            private readonly Stack<KeyValuePair<Location, Label>> elementStack = new Stack<KeyValuePair<Location, Label>>();
 
             /// <summary>
             /// Add a new element to the stack.
@@ -202,9 +211,9 @@ namespace Semmle.Extraction.CommentProcessing
             /// <returns>The element before l, or null.</returns>
             public KeyValuePair<Location, Label>? FindBefore(Location l)
             {
-                return elementStack.
-                    Where(v => v.Key.SourceSpan.End < l.SourceSpan.Start).
-                    LastOrNull();
+                return elementStack
+                    .Where(v => v.Key.SourceSpan.End < l.SourceSpan.Start)
+                    .LastOrNull();
             }
 
             /// <summary>
@@ -243,13 +252,13 @@ namespace Semmle.Extraction.CommentProcessing
         /// Process comments up until nextElement.
         /// Group comments into blocks, and associate blocks with elements.
         /// </summary>
-        /// 
+        ///
         /// <param name="commentEnumerator">Enumerator for all comments in the program.</param>
         /// <param name="nextElement">The next element in the list.</param>
         /// <param name="elementStack">A stack of nested program elements.</param>
         /// <param name="cb">Where to send the results.</param>
         /// <returns>true if there are more comments to process, false otherwise.</returns>
-        bool GenerateBindings(
+        private bool GenerateBindings(
             IEnumerator<KeyValuePair<Location, ICommentLine>> commentEnumerator,
             KeyValuePair<Location, Label>? nextElement,
             ElementStack elementStack,
@@ -261,7 +270,7 @@ namespace Semmle.Extraction.CommentProcessing
             // Iterate comments until the commentEnumerator has gone past nextElement
             while (nextElement == null || Compare(commentEnumerator.Current.Value.Location, nextElement.Value.Key) < 0)
             {
-                if(block is null)
+                if (block is null)
                     block = new CommentBlock(commentEnumerator.Current.Value);
 
                 if (!block.CombinesWith(commentEnumerator.Current.Value))
@@ -284,7 +293,7 @@ namespace Semmle.Extraction.CommentProcessing
                 }
             }
 
-            if(!(block is null))
+            if (!(block is null))
                 GenerateBindings(block, elementStack, nextElement, cb);
 
             return true;
@@ -308,35 +317,33 @@ namespace Semmle.Extraction.CommentProcessing
              * (Note that comment processing is O(n.log n) overall due to dictionary of elements and comments.)
             */
 
-            ElementStack elementStack = new ElementStack();
+            var elementStack = new ElementStack();
 
-            using (IEnumerator<KeyValuePair<Location, Label>> elementEnumerator = elements.GetEnumerator())
-            using (IEnumerator<KeyValuePair<Location, ICommentLine>> commentEnumerator = comments.GetEnumerator())
+            using IEnumerator<KeyValuePair<Location, Label>> elementEnumerator = elements.GetEnumerator();
+            using IEnumerator<KeyValuePair<Location, ICommentLine>> commentEnumerator = comments.GetEnumerator();
+            if (!commentEnumerator.MoveNext())
             {
-                if (!commentEnumerator.MoveNext())
+                // There are no comments to process.
+                return;
+            }
+
+            while (elementEnumerator.MoveNext())
+            {
+                if (!GenerateBindings(commentEnumerator, elementEnumerator.Current, elementStack, cb))
                 {
-                    // There are no comments to process.
+                    // No more comments to process.
                     return;
                 }
 
-                while (elementEnumerator.MoveNext())
-                {
-                    if (!GenerateBindings(commentEnumerator, elementEnumerator.Current, elementStack, cb))
-                    {
-                        // No more comments to process.
-                        return;
-                    }
-
-                    elementStack.Push(elementEnumerator.Current);
-                }
-
-                // Generate remaining comments at end of file
-                GenerateBindings(commentEnumerator, null, elementStack, cb);
+                elementStack.Push(elementEnumerator.Current);
             }
+
+            // Generate remaining comments at end of file
+            GenerateBindings(commentEnumerator, null, elementStack, cb);
         }
     }
 
-    class CommentBlock : ICommentBlock
+    internal class CommentBlock : ICommentBlock
     {
         private readonly List<ICommentLine> lines;
 
@@ -357,13 +364,14 @@ namespace Semmle.Extraction.CommentProcessing
         /// <returns>Whether the new line should be appended to this block.</returns>
         public bool CombinesWith(ICommentLine newLine)
         {
-            if (!CommentLines.Any()) return true;
+            if (!CommentLines.Any())
+                return true;
 
-            bool sameFile = Location.SourceTree == newLine.Location.SourceTree;
-            bool sameRow = Location.EndLine() == newLine.Location.StartLine();
-            bool sameColumn = Location.EndLine() + 1 == newLine.Location.StartLine();
-            bool nextRow = Location.StartColumn() == newLine.Location.StartColumn();
-            bool adjacent = sameFile && (sameRow || (sameColumn && nextRow));
+            var sameFile = Location.SourceTree == newLine.Location.SourceTree;
+            var sameRow = Location.EndLine() == newLine.Location.StartLine();
+            var sameColumn = Location.EndLine() + 1 == newLine.Location.StartLine();
+            var nextRow = Location.StartColumn() == newLine.Location.StartColumn();
+            var adjacent = sameFile && (sameRow || (sameColumn && nextRow));
 
             return
                 newLine.Type == CommentLineType.MultilineContinuation ||

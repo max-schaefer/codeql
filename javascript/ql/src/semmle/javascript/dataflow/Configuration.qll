@@ -421,6 +421,24 @@ private predicate barrierGuardBlocksSsaRefinement(
 }
 
 /**
+ * Holds if the result of `guard` is used in the branching condition `cond`.
+ *
+ * `outcome` is bound to the outcome of `cond` for join-ordering purposes.
+ */
+pragma[noinline]
+private predicate barrierGuardUsedInCondition(
+  BarrierGuardNode guard, ConditionGuardNode cond, boolean outcome
+) {
+  barrierGuardIsRelevant(guard) and
+  outcome = cond.getOutcome() and
+  (
+    cond.getTest() = guard.getEnclosingExpr()
+    or
+    cond.getTest().flow().getImmediatePredecessor+() = guard
+  )
+}
+
+/**
  * Holds if data flow node `nd` acts as a barrier for data flow, possibly due to aliasing
  * through an access path.
  *
@@ -435,14 +453,9 @@ private predicate barrierGuardBlocksNode(BarrierGuardNode guard, DataFlow::Node 
   )
   or
   // 2) `nd` is an instance of an access path `p`, and dominated by a barrier for `p`
-  barrierGuardIsRelevant(guard) and
   exists(AccessPath p, BasicBlock bb, ConditionGuardNode cond, boolean outcome |
     nd = DataFlow::valueNode(p.getAnInstanceIn(bb)) and
-    (
-      guard.getEnclosingExpr() = cond.getTest() or
-      guard = cond.getTest().flow().getImmediatePredecessor+()
-    ) and
-    outcome = cond.getOutcome() and
+    barrierGuardUsedInCondition(guard, cond, outcome) and
     barrierGuardBlocksAccessPath(guard, outcome, p, label) and
     cond.dominates(bb)
   )
@@ -982,8 +995,8 @@ private predicate appendStep(
 private predicate flowThroughCall(
   DataFlow::Node input, DataFlow::Node output, DataFlow::Configuration cfg, PathSummary summary
 ) {
-  exists(Function f, DataFlow::ValueNode ret |
-    ret.asExpr() = f.getAReturnedExpr() and
+  exists(Function f, DataFlow::FunctionReturnNode ret |
+    ret.getFunction() = f and
     (calls(output, f) or callsBound(output, f, _)) and // Do not consider partial calls
     reachableFromInput(f, output, input, ret, cfg, summary) and
     not isBarrierEdge(cfg, ret, output) and
@@ -999,6 +1012,17 @@ private predicate flowThroughCall(
     not isBarrierEdge(cfg, ret, output) and
     not isLabeledBarrierEdge(cfg, ret, output, summary.getEndLabel()) and
     not cfg.isLabeledBarrier(output, summary.getEndLabel())
+  )
+  or
+  // exception thrown inside an immediately awaited function call.
+  exists(DataFlow::FunctionNode f, DataFlow::Node invk, DataFlow::Node ret |
+    f.getFunction().isAsync()
+  |
+    (calls(invk, f.getFunction()) or callsBound(invk, f.getFunction(), _)) and
+    reachableFromInput(f.getFunction(), invk, input, ret, cfg, summary) and
+    output = invk.asExpr().getExceptionTarget() and
+    f.getExceptionalReturn() = getThrowTarget(ret) and
+    invk = getAwaitOperand(_)
   )
 }
 
@@ -1019,10 +1043,16 @@ private predicate storeStep(
   isAdditionalStoreStep(pred, succ, prop, cfg) and
   summary = PathSummary::level()
   or
-  exists(Function f, DataFlow::Node mid |
+  exists(Function f, DataFlow::Node mid, DataFlow::Node invk |
+    not f.isAsyncOrGenerator() and invk = succ
+    or
+    // store in an immediately awaited function call
+    f.isAsync() and
+    invk = getAwaitOperand(succ)
+  |
     // `f` stores its parameter `pred` in property `prop` of a value that flows back to the caller,
     // and `succ` is an invocation of `f`
-    reachableFromInput(f, succ, pred, mid, cfg, summary) and
+    reachableFromInput(f, invk, pred, mid, cfg, summary) and
     (
       returnedPropWrite(f, _, prop, mid)
       or
@@ -1030,9 +1060,19 @@ private predicate storeStep(
         isAdditionalStoreStep(mid, base, prop, cfg)
       )
       or
-      succ instanceof DataFlow::NewNode and
+      invk instanceof DataFlow::NewNode and
       receiverPropWrite(f, prop, mid)
     )
+  )
+}
+
+/**
+ * Gets a dataflow-node for the operand of the await-expression `await`.
+ */
+private DataFlow::Node getAwaitOperand(DataFlow::Node await) {
+  exists(AwaitExpr awaitExpr |
+    result = awaitExpr.getOperand().getUnderlyingValue().flow() and
+    await.asExpr() = awaitExpr
   )
 }
 
@@ -1128,8 +1168,14 @@ private predicate loadStep(
   isAdditionalLoadStep(pred, succ, prop, cfg) and
   summary = PathSummary::level()
   or
-  exists(Function f, DataFlow::Node read |
-    parameterPropRead(f, succ, pred, prop, read, cfg) and
+  exists(Function f, DataFlow::Node read, DataFlow::Node invk |
+    not f.isAsyncOrGenerator() and invk = succ
+    or
+    // load from an immediately awaited function call
+    f.isAsync() and
+    invk = getAwaitOperand(succ)
+  |
+    parameterPropRead(f, invk, pred, prop, read, cfg) and
     reachesReturn(f, read, cfg, summary)
   )
 }
@@ -1623,6 +1669,9 @@ class MidPathNode extends PathNode, MkMidNode {
     or
     // Skip the exceptional return on functions, as this highlights the entire function.
     nd = any(DataFlow::FunctionNode f).getExceptionalReturn()
+    or
+    // Skip the special return node for functions, as this highlights the entire function (and the returned expr is the previous node).
+    nd = any(DataFlow::FunctionNode f).getReturnNode()
     or
     // Skip the synthetic 'this' node, as a ThisExpr will be the next node anyway
     nd = DataFlow::thisNode(_)

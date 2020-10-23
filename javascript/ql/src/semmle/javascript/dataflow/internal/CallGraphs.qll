@@ -4,6 +4,7 @@
 
 private import javascript
 private import semmle.javascript.dataflow.internal.StepSummary
+private import semmle.javascript.dataflow.internal.PreCallGraphStep
 
 cached
 module CallGraph {
@@ -48,6 +49,10 @@ module CallGraph {
     t.start() and
     AccessPath::step(function, result)
     or
+    t.start() and
+    imprecision = 0 and
+    PreCallGraphStep::step(any(DataFlow::Node n | function.flowsTo(n)), result)
+    or
     imprecision = 0 and
     exists(DataFlow::ClassNode cls |
       exists(string name |
@@ -61,6 +66,19 @@ module CallGraph {
       function = cls.getConstructor() and
       cls.getAClassReference(t.continue()).flowsTo(result)
     )
+    or
+    imprecision = 0 and
+    exists(DataFlow::FunctionNode outer |
+      result = getAFunctionReference(outer, 0, t.continue()).getAnInvocation() and
+      locallyReturnedFunction(outer, function)
+    )
+  }
+
+  cached
+  private predicate locallyReturnedFunction(
+    DataFlow::FunctionNode outer, DataFlow::FunctionNode inner
+  ) {
+    inner.flowsTo(outer.getAReturn())
   }
 
   /**
