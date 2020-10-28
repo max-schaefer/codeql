@@ -183,12 +183,6 @@ module PropagationGraph {
     pred.flowsTo(succ.asDataFlowNode()) and
     pred != succ
     or
-    exists(ObjectExpr obj | obj.flow() = succ.asDataFlowNode() |
-      pred.flowsTo(obj.getAProperty().getInit().flow())
-    )
-    or
-    pred.flowsTo(succ.asDataFlowNode().(DataFlow::ArrayLiteralNode).getAnElement())
-    or
     pointsTo(_, pred.asDataFlowNode()) = pointsTo(_, succ.asDataFlowNode()) and
     pred != succ
     or
