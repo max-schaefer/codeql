@@ -1,8 +1,9 @@
 import javascript
 import PropagationGraphs
 
-predicate reachableFromSourceCandidate(PropagationGraph::Node src, PropagationGraph::Node nd) {
-  src.isSourceCandidate() and
+predicate reachableFromSourceCandidate(
+  PropagationGraph::SourceCandidate src, PropagationGraph::Node nd
+) {
   PropagationGraph::edge(src, nd)
   or
   exists(PropagationGraph::Node mid |
@@ -11,8 +12,9 @@ predicate reachableFromSourceCandidate(PropagationGraph::Node src, PropagationGr
   )
 }
 
-predicate reachableFromSanitizerCandidate(PropagationGraph::Node san, PropagationGraph::Node nd) {
-  san.isSanitizerCandidate() and
+predicate reachableFromSanitizerCandidate(
+  PropagationGraph::SanitizerCandidate san, PropagationGraph::Node nd
+) {
   PropagationGraph::edge(san, nd)
   or
   exists(PropagationGraph::Node mid |
@@ -21,12 +23,13 @@ predicate reachableFromSanitizerCandidate(PropagationGraph::Node san, Propagatio
   )
 }
 
-predicate triple(PropagationGraph::Node src, PropagationGraph::Node san, PropagationGraph::Node snk) {
+predicate triple(
+  PropagationGraph::SourceCandidate src, PropagationGraph::SanitizerCandidate san,
+  PropagationGraph::SinkCandidate snk
+) {
   reachableFromSourceCandidate(src, san) and
-  san.isSanitizerCandidate() and
   src.asDataFlowNode().getEnclosingExpr() != san.asDataFlowNode().getEnclosingExpr() and
-  reachableFromSanitizerCandidate(san, snk) and
-  snk.isSinkCandidate()
+  reachableFromSanitizerCandidate(san, snk)
   // NB: we do not require `san` and `snk` to be different, since we might have a situation like
   // `sink(sanitize(src))` where `san` and `snk` are both `sanitize(src)`
 }

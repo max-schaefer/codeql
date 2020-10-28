@@ -67,46 +67,33 @@ module PropagationGraph {
 
     Node() { this = MkNode(nd) }
 
-    predicate isSourceCandidate() {
-      exists(candidateRep()) and
-      (
-        nd instanceof DataFlow::InvokeNode or
-        nd instanceof DataFlow::PropRead or
-        nd instanceof DataFlow::ParameterNode
-      )
-    }
-
-    predicate isSanitizerCandidate() {
-      exists(candidateRep()) and nd instanceof DataFlow::InvokeNode
-    }
-
-    predicate isSinkCandidate() {
-      exists(candidateRep()) and
-      (
-        exists(DataFlow::InvokeNode invk |
-          nd = invk.getAnArgument()
-          or
-          nd = invk.(DataFlow::MethodCallNode).getReceiver()
-        )
-        or
-        nd = any(DataFlow::PropWrite pw).getRhs()
-      )
-    }
-
-    private string candidateRep() { result = candidateRep(nd, _) }
+    string candidateRep(boolean asRhs) { result = candidateRep(nd, _, asRhs) }
 
     /**
      * Gets an abstract representation of this node, corresponding to the REP function
      * in the Seldon paper.
+     *
+     * If `asRhs` is true, then this node is represented as the right-hand side of a definition,
+     * otherwise as a use.
+     *
+     * For example, the call `foo()` in `bar(foo())` can be represented either as the first argument
+     * to function `bar`, or as the result of function `foo`. If `asRhs` is true, this predicate
+     * chooses the former representation, if it is false the latter.
      */
-    string rep() {
-      result = candidateRep() and
+    string rep(boolean asRhs) {
+      result = candidateRep(asRhs) and
       // eliminate rare representations
-      count(Node n | n.candidateRep() = result) >= 5
+      count(Node n | n.candidateRep(_) = result) >= 5
     }
 
-    string preciseRep() {
-      result = rep() and
+    /**
+     * Gets an abstract representation of this node, filtering out generic representations that
+     * are uninteresting for inferring sources and sinks.
+     *
+     * See `rep` for an explanation of the `asRhs` parameter.
+     */
+    string preciseRep(boolean asRhs) {
+      result = rep(asRhs) and
       not result.matches(genericMemberPattern())
     }
 
@@ -116,7 +103,7 @@ module PropagationGraph {
      * This can happen, for instance, for dynamic property reads where we
      * cannot tell the name of the property being accessed.
      */
-    predicate unrepresentable() { not exists(candidateRep()) }
+    predicate unrepresentable() { not exists(candidateRep(_)) }
 
     predicate hasLocationInfo(
       string filepath, int startline, int startcolumn, int endline, int endcolumn
@@ -159,6 +146,48 @@ module PropagationGraph {
     }
 
     DataFlow::Node asDataFlowNode() { result = nd }
+  }
+
+  class SourceCandidate extends Node {
+    SourceCandidate() {
+      exists(candidateRep(false)) and
+      (
+        nd instanceof DataFlow::InvokeNode or
+        nd instanceof DataFlow::PropRead or
+        nd instanceof DataFlow::ParameterNode
+      )
+    }
+
+    string rep() { result = rep(false) }
+
+    string preciseRep() { result = preciseRep(false) }
+  }
+
+  class SanitizerCandidate extends Node {
+    SanitizerCandidate() { exists(candidateRep(false)) and nd instanceof DataFlow::InvokeNode }
+
+    string rep() { result = rep(false) }
+
+    string preciseRep() { result = preciseRep(false) }
+  }
+
+  class SinkCandidate extends Node {
+    SinkCandidate() {
+      exists(candidateRep(true)) and
+      (
+        exists(DataFlow::InvokeNode invk |
+          nd = invk.getAnArgument()
+          or
+          nd = invk.(DataFlow::MethodCallNode).getReceiver()
+        )
+        or
+        nd = any(DataFlow::PropWrite pw).getRhs()
+      )
+    }
+
+    string rep() { result = rep(true) }
+
+    string preciseRep() { result = preciseRep(true) }
   }
 
   private string genericMemberPattern() {

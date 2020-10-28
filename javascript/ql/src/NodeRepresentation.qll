@@ -44,21 +44,24 @@ private DataFlow::Node getAnExport(string pkgName, string prop) {
 /**
  * Gets a candidate representation of `nd` as a (suffix of an) access path.
  */
-string candidateRep(DataFlow::Node nd, int depth) {
+string candidateRep(DataFlow::Node nd, int depth, boolean asRhs) {
   // the global object
   isRelevant(nd) and
   nd = DataFlow::globalObjectRef() and
   result = "(global)" and
-  depth = 1
+  depth = 1 and
+  asRhs = false
   or
   // package imports/exports
   isRelevant(nd) and
   exists(string pkg |
     nd = DataFlow::moduleImport(pkg) and
     // avoid picking up local imports
-    pkg.regexpMatch("[^./].*")
+    pkg.regexpMatch("[^./].*") and
+    asRhs = false
     or
-    nd = getAnExport(pkg).getALocalSource()
+    nd = getAnExport(pkg).getALocalSource() and
+    asRhs = true
   |
     result = "(root https://www.npmjs.com/package/" + pkg + ")" and
     depth = 1
@@ -67,7 +70,7 @@ string candidateRep(DataFlow::Node nd, int depth) {
   // compound representations
   exists(DataFlow::SourceNode base, string step, string baserep |
     (
-      baserep = candidateRep(base, depth - 1) and
+      baserep = candidateRep(base, depth - 1, _) and
       // bound maximum depth of candidate representation
       depth <= maxdepth()
       or
@@ -81,41 +84,51 @@ string candidateRep(DataFlow::Node nd, int depth) {
   |
     // members
     exists(string prop |
-      nd = base.getAPropertyRead(prop)
+      nd = base.getAPropertyRead(prop) and
+      asRhs = false
       or
-      nd = base.getAPropertyWrite(prop).getRhs().getALocalSource()
+      nd = base.getAPropertyWrite(prop).getRhs().getALocalSource() and
+      asRhs = true
     |
       step = "member " + prop
     )
     or
     // instances
     (
-      nd = base.getAnInstantiation()
+      nd = base.getAnInstantiation() and
+      asRhs = false
       or
-      nd = base.(DataFlow::ClassNode).getAnInstanceReference()
+      nd = base.(DataFlow::ClassNode).getAnInstanceReference() and
+      asRhs = false
     ) and
     step = "instance"
     or
     // parameters
     exists(string p |
       exists(int i |
-        nd = base.(DataFlow::FunctionNode).getParameter(i) or
-        nd = base.(DataFlow::InvokeNode).getArgument(i)
+        nd = base.(DataFlow::FunctionNode).getParameter(i) and
+        asRhs = false
+        or
+        nd = base.(DataFlow::InvokeNode).getArgument(i) and
+        asRhs = true
       |
         p = i.toString()
       )
       or
       nd = base.(DataFlow::FunctionNode).getAParameter() and
-      p = nd.(DataFlow::ParameterNode).getName()
+      p = nd.(DataFlow::ParameterNode).getName() and
+      asRhs = false
     |
       step = "parameter " + p
     )
     or
     // return values
     (
-      nd = base.(DataFlow::FunctionNode).getAReturn().getALocalSource()
+      nd = base.(DataFlow::FunctionNode).getAReturn().getALocalSource() and
+      asRhs = true
       or
-      nd = base.getAnInvocation()
+      nd = base.getAnInvocation() and
+      asRhs = false
     ) and
     step = "return"
   )
@@ -126,18 +139,21 @@ string candidateRep(DataFlow::Node nd, int depth) {
     nd = getAnExport(pkg, m).getALocalSource() and
     baserep = "(root https://www.npmjs.com/package/" + pkg + ")" and
     result = "(member " + m + " " + [baserep, "*"] + ")" and
-    depth = 2
+    depth = 2 and
+    asRhs = true
   )
   or
   // global variables, which are treated as members of the global object
   isRelevant(nd) and
   exists(string g |
-    nd = DataFlow::globalVarRef(g)
+    nd = DataFlow::globalVarRef(g) and
+    asRhs = false
     or
     exists(AssignExpr assgn |
       assgn.getLhs() = DataFlow::globalVarRef(g).asExpr() and
       nd = assgn.getRhs().flow().getALocalSource()
-    )
+    ) and
+    asRhs = true
   |
     result = "(member " + g + " (global))" and
     depth = 2
@@ -146,6 +162,6 @@ string candidateRep(DataFlow::Node nd, int depth) {
   // we ignore `await`
   exists(DataFlow::SourceNode base |
     base.flowsToExpr(nd.asExpr().(AwaitExpr).getOperand()) and
-    result = candidateRep(base, depth)
+    result = candidateRep(base, depth, asRhs)
   )
 }
