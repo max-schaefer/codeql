@@ -176,6 +176,8 @@ module PropagationGraph {
   predicate edge(Node pred, Node succ) {
     exists(DataFlow::CallNode c | not calls(c, _) and c = succ.asDataFlowNode() |
       pred.flowsTo(c.getAnArgument())
+      or
+      pred.flowsTo(c.getReceiver())
     )
     or
     pred.flowsTo(succ.asDataFlowNode()) and
