@@ -13,9 +13,17 @@ import javascript
 import semmle.javascript.security.dataflow.RequestForgery::RequestForgery
 import DataFlow::PathGraph
 
+DataFlow::Node getRequest(DataFlow::Node nd) {
+  if nd instanceof Sink then result = nd.(Sink).getARequest() else result = nd
+}
+
+string getKind(DataFlow::Node nd) {
+  if nd instanceof Sink then result = nd.(Sink).getKind() else result = "details"
+}
+
 from Configuration cfg, DataFlow::PathNode source, DataFlow::PathNode sink, DataFlow::Node request
 where
   cfg.hasFlowPath(source, sink) and
-  request = sink.getNode().(Sink).getARequest()
+  request = getRequest(sink.getNode())
 select request, source, sink, "The $@ of this request depends on $@.", sink.getNode(),
-  sink.getNode().(Sink).getKind(), source, "a user-provided value"
+  getKind(sink.getNode()), source, "a user-provided value"

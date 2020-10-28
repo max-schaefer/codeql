@@ -16,12 +16,20 @@ import semmle.javascript.security.dataflow.PrototypePollution::PrototypePollutio
 import DataFlow::PathGraph
 import semmle.javascript.dependencies.Dependencies
 
+predicate dependencyInfo(DataFlow::Node nd, string moduleName, Locatable location) {
+  if nd instanceof Sink
+  then nd.(Sink).dependencyInfo(moduleName, location)
+  else (
+    moduleName = "a dependency" and location = nd.getAstNode()
+  )
+}
+
 from
   Configuration cfg, DataFlow::PathNode source, DataFlow::PathNode sink, string moduleName,
   Locatable dependencyLoc
 where
   cfg.hasFlowPath(source, sink) and
-  sink.getNode().(Sink).dependencyInfo(moduleName, dependencyLoc)
+  dependencyInfo(sink.getNode(), moduleName, dependencyLoc)
 select sink.getNode(), source, sink,
   "Prototype pollution caused by merging a user-controlled value from $@ using a vulnerable version of $@.",
   source, "here", dependencyLoc, moduleName

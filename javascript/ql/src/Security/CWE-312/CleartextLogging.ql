@@ -32,10 +32,14 @@ predicate inBrowserEnvironment(TopLevel tl) {
   )
 }
 
+string describe(DataFlow::Node nd) {
+  if nd instanceof Source then result = nd.(Source).describe() else result = "this code"
+}
+
 from Configuration cfg, DataFlow::PathNode source, DataFlow::PathNode sink
 where
   cfg.hasFlowPath(source, sink) and
   // ignore logging to the browser console (even though it is not a good practice)
   not inBrowserEnvironment(sink.getNode().asExpr().getTopLevel())
 select sink.getNode(), source, sink, "Sensitive data returned by $@ is logged here.",
-  source.getNode(), source.getNode().(Source).describe()
+  source.getNode(), describe(source.getNode())

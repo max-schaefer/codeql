@@ -15,8 +15,12 @@ import javascript
 import semmle.javascript.security.dataflow.HardcodedDataInterpretedAsCode::HardcodedDataInterpretedAsCode
 import DataFlow::PathGraph
 
+string getKind(DataFlow::Node nd) {
+  if nd instanceof Sink then result = nd.(Sink).getKind() else result = "code"
+}
+
 from Configuration cfg, DataFlow::PathNode source, DataFlow::PathNode sink
 where cfg.hasFlowPath(source, sink)
 select sink.getNode(), source, sink,
-  "Hard-coded data from $@ is interpreted as " + sink.getNode().(Sink).getKind() + ".",
-  source.getNode(), "here"
+  "Hard-coded data from $@ is interpreted as " + getKind(sink.getNode()) + ".", source.getNode(),
+  "here"

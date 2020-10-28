@@ -16,6 +16,10 @@ import javascript
 private import semmle.javascript.security.dataflow.HardcodedCredentials::HardcodedCredentials
 import DataFlow::PathGraph
 
+string getKind(DataFlow::Node nd) {
+  if nd instanceof Sink then result = nd.(Sink).getKind() else result = "a credential"
+}
+
 from Configuration cfg, DataFlow::PathNode source, DataFlow::PathNode sink, string value
 where
   cfg.hasFlowPath(source, sink) and
@@ -32,4 +36,4 @@ where
     )
   else value = "This hard-coded value"
 select source.getNode(), source, sink, value + " is used as $@.", sink.getNode(),
-  sink.getNode().(Sink).getKind()
+  getKind(sink.getNode())

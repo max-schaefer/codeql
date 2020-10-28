@@ -15,7 +15,11 @@ import javascript
 import semmle.javascript.security.dataflow.RemotePropertyInjection::RemotePropertyInjection
 import DataFlow::PathGraph
 
+string getMessage(DataFlow::Node nd) {
+  if nd instanceof Sink then result = nd.(Sink).getMessage() else result = " a property name."
+}
+
 from Configuration cfg, DataFlow::PathNode source, DataFlow::PathNode sink
 where cfg.hasFlowPath(source, sink)
-select sink.getNode(), source, sink, "A $@ is used as" + sink.getNode().(Sink).getMessage(),
+select sink.getNode(), source, sink, "A $@ is used as" + getMessage(sink.getNode()),
   source.getNode(), "user-provided value"

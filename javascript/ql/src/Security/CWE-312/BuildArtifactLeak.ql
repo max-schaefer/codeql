@@ -16,8 +16,14 @@ import javascript
 import semmle.javascript.security.dataflow.BuildArtifactLeak::BuildArtifactLeak
 import DataFlow::PathGraph
 
+string describe(DataFlow::Node nd) {
+  if nd instanceof CleartextLogging::Source
+  then result = nd.(CleartextLogging::Source).describe()
+  else result = "this code"
+}
+
 from Configuration cfg, DataFlow::PathNode source, DataFlow::PathNode sink
 where cfg.hasFlowPath(source, sink)
 select sink.getNode(), source, sink,
   "Sensitive data returned by $@ is stored in a build artifact here.", source.getNode(),
-  source.getNode().(CleartextLogging::Source).describe()
+  describe(source.getNode())

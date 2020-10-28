@@ -14,10 +14,14 @@ import semmle.javascript.security.dataflow.BrokenCryptoAlgorithm::BrokenCryptoAl
 import semmle.javascript.security.SensitiveActions
 import DataFlow::PathGraph
 
+string describe(DataFlow::Node nd) {
+  if nd instanceof Source then result = nd.(Source).describe() else result = "here"
+}
+
 from Configuration cfg, DataFlow::PathNode source, DataFlow::PathNode sink
 where
   cfg.hasFlowPath(source, sink) and
   not source.getNode().asExpr() instanceof CleartextPasswordExpr // flagged by js/insufficient-password-hash
 select sink.getNode(), source, sink,
   "Sensitive data from $@ is used in a broken or weak cryptographic algorithm.", source.getNode(),
-  source.getNode().(Source).describe()
+  describe(source.getNode())

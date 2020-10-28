@@ -16,7 +16,11 @@ import javascript
 import semmle.javascript.security.dataflow.CleartextStorage::CleartextStorage
 import DataFlow::PathGraph
 
+string describe(DataFlow::Node nd) {
+  if nd instanceof Source then result = nd.(Source).describe() else result = "this code"
+}
+
 from Configuration cfg, DataFlow::PathNode source, DataFlow::PathNode sink
 where cfg.hasFlowPath(source, sink)
 select sink.getNode(), source, sink, "Sensitive data returned by $@ is stored here.",
-  source.getNode(), source.getNode().(Source).describe()
+  source.getNode(), describe(source.getNode())

@@ -15,8 +15,11 @@ import javascript
 import semmle.javascript.security.dataflow.DomBasedXss::DomBasedXss
 import DataFlow::PathGraph
 
+string getKind(DataFlow::Node nd) {
+  if nd instanceof Sink then result = nd.(Sink).getVulnerabilityKind() else result = "XSS"
+}
+
 from Configuration cfg, DataFlow::PathNode source, DataFlow::PathNode sink
 where cfg.hasFlowPath(source, sink)
-select sink.getNode(), source, sink,
-  sink.getNode().(Sink).getVulnerabilityKind() + " vulnerability due to $@.", source.getNode(),
-  "user-provided value"
+select sink.getNode(), source, sink, getKind(sink.getNode()) + " vulnerability due to $@.",
+  source.getNode(), "user-provided value"

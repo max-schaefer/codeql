@@ -14,7 +14,11 @@ import javascript
 import semmle.javascript.security.dataflow.InsecureDownload::InsecureDownload
 import DataFlow::PathGraph
 
+DataFlow::Node getDownloadCall(DataFlow::Node nd) {
+  if nd instanceof Sink then result = nd.(Sink).getDownloadCall() else result = nd
+}
+
 from Configuration cfg, DataFlow::PathNode source, DataFlow::PathNode sink
 where cfg.hasFlowPath(source, sink)
 select sink.getNode(), source, sink, "$@ of sensitive file from $@.",
-  sink.getNode().(Sink).getDownloadCall(), "Download", source.getNode(), "HTTP source"
+  getDownloadCall(sink.getNode()), "Download", source.getNode(), "HTTP source"

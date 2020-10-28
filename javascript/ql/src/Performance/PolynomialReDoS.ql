@@ -16,7 +16,11 @@ import javascript
 import semmle.javascript.security.performance.PolynomialReDoS::PolynomialReDoS
 import DataFlow::PathGraph
 
+Locatable getRegExp(DataFlow::Node nd) {
+  if nd instanceof Sink then result = nd.(Sink).getRegExp() else result = nd.getAstNode()
+}
+
 from Configuration cfg, DataFlow::PathNode source, DataFlow::PathNode sink
 where cfg.hasFlowPath(source, sink)
 select sink.getNode(), source, sink, "This expensive $@ use depends on $@.",
-  sink.getNode().(Sink).getRegExp(), "regular expression", source.getNode(), "a user-provided value"
+  getRegExp(sink.getNode()), "regular expression", source.getNode(), "a user-provided value"

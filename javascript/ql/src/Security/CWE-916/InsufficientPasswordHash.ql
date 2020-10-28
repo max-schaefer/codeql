@@ -13,7 +13,11 @@ import javascript
 import semmle.javascript.security.dataflow.InsufficientPasswordHash::InsufficientPasswordHash
 import DataFlow::PathGraph
 
+string describe(DataFlow::Node nd) {
+  if nd instanceof Source then result = nd.(Source).describe() else result = "here"
+}
+
 from Configuration cfg, DataFlow::PathNode source, DataFlow::PathNode sink
 where cfg.hasFlowPath(source, sink)
 select sink.getNode(), source, sink, "Password from $@ is hashed insecurely.", source.getNode(),
-  source.getNode().(Source).describe()
+  describe(source.getNode())

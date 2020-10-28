@@ -21,13 +21,16 @@ import semmle.javascript.security.IncompleteBlacklistSanitizer
 /**
  * Gets a pretty string of the dangerous characters for `sink`.
  */
-string prettyPrintDangerousCharaters(Sink sink) {
-  result =
-    strictconcat(string s |
-      s = describeCharacters(sink.getADangerousCharacter())
-    |
-      s, ", " order by s
-    ).regexpReplaceAll(",(?=[^,]+$)", " or")
+string prettyPrintDangerousCharacters(DataFlow::Node sink) {
+  if sink instanceof Sink
+  then
+    result =
+      strictconcat(string s |
+        s = describeCharacters(sink.(Sink).getADangerousCharacter())
+      |
+        s, ", " order by s
+      ).regexpReplaceAll(",(?=[^,]+$)", " or")
+  else result = "dangerous characters"
 }
 
 from Configuration cfg, DataFlow::PathNode source, DataFlow::PathNode sink
@@ -37,5 +40,5 @@ select sink.getNode(), source, sink,
   // to get the flow labels that reach the sink, so the message includes
   // all of them in a disjunction
   "Cross-site scripting vulnerability as the output of $@ may contain " +
-    prettyPrintDangerousCharaters(sink.getNode()) + " when it reaches this attribute definition.",
+    prettyPrintDangerousCharacters(sink.getNode()) + " when it reaches this attribute definition.",
   source.getNode(), "this final HTML sanitizer step"
