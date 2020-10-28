@@ -1,15 +1,24 @@
 | seldon-example-1.js:7:17:7:34 | require('express') | seldon-example-1.js:14:9:14:15 | express |
+| seldon-example-1.js:7:17:7:34 | require('express') | seldon-example-1.js:14:9:14:20 | express.json |
 | seldon-example-1.js:8:12:8:24 | require('fs') | seldon-example-1.js:25:5:25:6 | fs |
+| seldon-example-1.js:8:12:8:24 | require('fs') | seldon-example-1.js:25:5:25:16 | fs.writeFile |
 | seldon-example-1.js:8:12:8:24 | require('fs') | seldon-example-1.js:43:9:43:10 | fs |
+| seldon-example-1.js:8:12:8:24 | require('fs') | seldon-example-1.js:43:9:43:20 | fs.writeFile |
 | seldon-example-1.js:9:14:9:28 | require('path') | seldon-example-1.js:23:24:23:27 | path |
+| seldon-example-1.js:9:14:9:28 | require('path') | seldon-example-1.js:23:24:23:32 | path.join |
 | seldon-example-1.js:9:14:9:28 | require('path') | seldon-example-1.js:23:24:23:55 | path.jo ... y.path) |
 | seldon-example-1.js:9:14:9:28 | require('path') | seldon-example-1.js:25:18:25:29 | resolvedPath |
 | seldon-example-1.js:9:14:9:28 | require('path') | seldon-example-1.js:38:24:38:27 | path |
+| seldon-example-1.js:9:14:9:28 | require('path') | seldon-example-1.js:38:24:38:32 | path.join |
 | seldon-example-1.js:9:14:9:28 | require('path') | seldon-example-1.js:38:24:38:55 | path.jo ... y.path) |
 | seldon-example-1.js:11:13:11:21 | express() | seldon-example-1.js:14:1:14:3 | app |
+| seldon-example-1.js:11:13:11:21 | express() | seldon-example-1.js:14:1:14:7 | app.use |
 | seldon-example-1.js:11:13:11:21 | express() | seldon-example-1.js:20:1:20:3 | app |
+| seldon-example-1.js:11:13:11:21 | express() | seldon-example-1.js:20:1:20:8 | app.post |
 | seldon-example-1.js:11:13:11:21 | express() | seldon-example-1.js:35:1:35:3 | app |
+| seldon-example-1.js:11:13:11:21 | express() | seldon-example-1.js:35:1:35:8 | app.post |
 | seldon-example-1.js:11:13:11:21 | express() | seldon-example-1.js:56:1:56:3 | app |
+| seldon-example-1.js:11:13:11:21 | express() | seldon-example-1.js:56:1:56:10 | app.listen |
 | seldon-example-1.js:14:1:14:3 | app | seldon-example-1.js:11:13:11:21 | express() |
 | seldon-example-1.js:14:1:14:3 | app | seldon-example-1.js:20:1:20:3 | app |
 | seldon-example-1.js:14:1:14:3 | app | seldon-example-1.js:35:1:35:3 | app |
@@ -40,7 +49,9 @@
 | seldon-example-1.js:20:27:20:29 | req | seldon-example-1.js:25:32:25:39 | req.body |
 | seldon-example-1.js:20:27:20:29 | req | seldon-example-1.js:25:32:25:48 | req.body.contents |
 | seldon-example-1.js:20:32:20:34 | res | seldon-example-1.js:27:13:27:15 | res |
+| seldon-example-1.js:20:32:20:34 | res | seldon-example-1.js:27:13:27:26 | res.sendStatus |
 | seldon-example-1.js:20:32:20:34 | res | seldon-example-1.js:29:13:29:15 | res |
+| seldon-example-1.js:20:32:20:34 | res | seldon-example-1.js:29:13:29:26 | res.sendStatus |
 | seldon-example-1.js:23:24:23:27 | path | seldon-example-1.js:9:14:9:28 | require('path') |
 | seldon-example-1.js:23:24:23:27 | path | seldon-example-1.js:23:24:23:55 | path.jo ... y.path) |
 | seldon-example-1.js:23:24:23:27 | path | seldon-example-1.js:38:24:38:27 | path |
@@ -70,7 +81,9 @@
 | seldon-example-1.js:35:25:35:27 | req | seldon-example-1.js:43:36:43:43 | req.body |
 | seldon-example-1.js:35:25:35:27 | req | seldon-example-1.js:43:36:43:52 | req.body.contents |
 | seldon-example-1.js:35:30:35:32 | res | seldon-example-1.js:45:17:45:19 | res |
+| seldon-example-1.js:35:30:35:32 | res | seldon-example-1.js:45:17:45:30 | res.sendStatus |
 | seldon-example-1.js:35:30:35:32 | res | seldon-example-1.js:47:17:47:19 | res |
+| seldon-example-1.js:35:30:35:32 | res | seldon-example-1.js:47:17:47:30 | res.sendStatus |
 | seldon-example-1.js:38:24:38:27 | path | seldon-example-1.js:9:14:9:28 | require('path') |
 | seldon-example-1.js:38:24:38:27 | path | seldon-example-1.js:23:24:23:27 | path |
 | seldon-example-1.js:38:24:38:27 | path | seldon-example-1.js:38:24:38:55 | path.jo ... y.path) |
@@ -102,19 +115,28 @@
 | seldon-example-1.js:56:1:56:3 | app | seldon-example-1.js:20:1:20:3 | app |
 | seldon-example-1.js:56:1:56:3 | app | seldon-example-1.js:35:1:35:3 | app |
 | seldon-example-2.js:7:17:7:34 | require('express') | seldon-example-2.js:14:9:14:15 | express |
+| seldon-example-2.js:7:17:7:34 | require('express') | seldon-example-2.js:14:9:14:20 | express.json |
 | seldon-example-2.js:8:12:8:24 | require('fs') | seldon-example-2.js:25:5:25:6 | fs |
+| seldon-example-2.js:8:12:8:24 | require('fs') | seldon-example-2.js:25:5:25:16 | fs.writeFile |
 | seldon-example-2.js:8:12:8:24 | require('fs') | seldon-example-2.js:43:9:43:10 | fs |
+| seldon-example-2.js:8:12:8:24 | require('fs') | seldon-example-2.js:43:9:43:20 | fs.writeFile |
 | seldon-example-2.js:9:14:9:28 | require('path') | seldon-example-2.js:23:24:23:27 | path |
+| seldon-example-2.js:9:14:9:28 | require('path') | seldon-example-2.js:23:24:23:32 | path.join |
 | seldon-example-2.js:9:14:9:28 | require('path') | seldon-example-2.js:23:24:23:55 | path.jo ... y.path) |
 | seldon-example-2.js:9:14:9:28 | require('path') | seldon-example-2.js:25:18:25:29 | resolvedPath |
 | seldon-example-2.js:9:14:9:28 | require('path') | seldon-example-2.js:38:24:38:27 | path |
+| seldon-example-2.js:9:14:9:28 | require('path') | seldon-example-2.js:38:24:38:32 | path.join |
 | seldon-example-2.js:9:14:9:28 | require('path') | seldon-example-2.js:38:24:38:55 | path.jo ... y.path) |
 | seldon-example-2.js:9:14:9:28 | require('path') | seldon-example-2.js:40:20:40:57 | require ... edPath) |
 | seldon-example-2.js:9:14:9:28 | require('path') | seldon-example-2.js:40:45:40:56 | resolvedPath |
 | seldon-example-2.js:11:13:11:21 | express() | seldon-example-2.js:14:1:14:3 | app |
+| seldon-example-2.js:11:13:11:21 | express() | seldon-example-2.js:14:1:14:7 | app.use |
 | seldon-example-2.js:11:13:11:21 | express() | seldon-example-2.js:20:1:20:3 | app |
+| seldon-example-2.js:11:13:11:21 | express() | seldon-example-2.js:20:1:20:8 | app.post |
 | seldon-example-2.js:11:13:11:21 | express() | seldon-example-2.js:35:1:35:3 | app |
+| seldon-example-2.js:11:13:11:21 | express() | seldon-example-2.js:35:1:35:8 | app.post |
 | seldon-example-2.js:11:13:11:21 | express() | seldon-example-2.js:52:1:52:3 | app |
+| seldon-example-2.js:11:13:11:21 | express() | seldon-example-2.js:52:1:52:10 | app.listen |
 | seldon-example-2.js:14:1:14:3 | app | seldon-example-2.js:11:13:11:21 | express() |
 | seldon-example-2.js:14:1:14:3 | app | seldon-example-2.js:20:1:20:3 | app |
 | seldon-example-2.js:14:1:14:3 | app | seldon-example-2.js:35:1:35:3 | app |
@@ -149,7 +171,9 @@
 | seldon-example-2.js:20:27:20:29 | req | seldon-example-2.js:25:32:25:39 | req.body |
 | seldon-example-2.js:20:27:20:29 | req | seldon-example-2.js:25:32:25:48 | req.body.contents |
 | seldon-example-2.js:20:32:20:34 | res | seldon-example-2.js:27:13:27:15 | res |
+| seldon-example-2.js:20:32:20:34 | res | seldon-example-2.js:27:13:27:26 | res.sendStatus |
 | seldon-example-2.js:20:32:20:34 | res | seldon-example-2.js:29:13:29:15 | res |
+| seldon-example-2.js:20:32:20:34 | res | seldon-example-2.js:29:13:29:26 | res.sendStatus |
 | seldon-example-2.js:23:24:23:27 | path | seldon-example-2.js:9:14:9:28 | require('path') |
 | seldon-example-2.js:23:24:23:27 | path | seldon-example-2.js:23:24:23:55 | path.jo ... y.path) |
 | seldon-example-2.js:23:24:23:27 | path | seldon-example-2.js:38:24:38:27 | path |
@@ -181,7 +205,9 @@
 | seldon-example-2.js:35:25:35:27 | req | seldon-example-2.js:43:36:43:43 | req.body |
 | seldon-example-2.js:35:25:35:27 | req | seldon-example-2.js:43:36:43:52 | req.body.contents |
 | seldon-example-2.js:35:30:35:32 | res | seldon-example-2.js:45:17:45:19 | res |
+| seldon-example-2.js:35:30:35:32 | res | seldon-example-2.js:45:17:45:30 | res.sendStatus |
 | seldon-example-2.js:35:30:35:32 | res | seldon-example-2.js:47:17:47:19 | res |
+| seldon-example-2.js:35:30:35:32 | res | seldon-example-2.js:47:17:47:30 | res.sendStatus |
 | seldon-example-2.js:38:24:38:27 | path | seldon-example-2.js:9:14:9:28 | require('path') |
 | seldon-example-2.js:38:24:38:27 | path | seldon-example-2.js:23:24:23:27 | path |
 | seldon-example-2.js:38:24:38:27 | path | seldon-example-2.js:38:24:38:55 | path.jo ... y.path) |
@@ -211,17 +237,26 @@
 | seldon-example-2.js:52:1:52:3 | app | seldon-example-2.js:20:1:20:3 | app |
 | seldon-example-2.js:52:1:52:3 | app | seldon-example-2.js:35:1:35:3 | app |
 | seldon-example-3.js:7:17:7:34 | require('express') | seldon-example-3.js:14:9:14:15 | express |
+| seldon-example-3.js:7:17:7:34 | require('express') | seldon-example-3.js:14:9:14:20 | express.json |
 | seldon-example-3.js:8:12:8:24 | require('fs') | seldon-example-3.js:25:5:25:6 | fs |
+| seldon-example-3.js:8:12:8:24 | require('fs') | seldon-example-3.js:25:5:25:16 | fs.writeFile |
 | seldon-example-3.js:8:12:8:24 | require('fs') | seldon-example-3.js:43:9:43:10 | fs |
+| seldon-example-3.js:8:12:8:24 | require('fs') | seldon-example-3.js:43:9:43:20 | fs.writeFile |
 | seldon-example-3.js:9:14:9:28 | require('path') | seldon-example-3.js:23:24:23:27 | path |
+| seldon-example-3.js:9:14:9:28 | require('path') | seldon-example-3.js:23:24:23:32 | path.join |
 | seldon-example-3.js:9:14:9:28 | require('path') | seldon-example-3.js:23:24:23:55 | path.jo ... y.path) |
 | seldon-example-3.js:9:14:9:28 | require('path') | seldon-example-3.js:25:18:25:29 | resolvedPath |
 | seldon-example-3.js:9:14:9:28 | require('path') | seldon-example-3.js:38:24:38:27 | path |
+| seldon-example-3.js:9:14:9:28 | require('path') | seldon-example-3.js:38:24:38:32 | path.join |
 | seldon-example-3.js:9:14:9:28 | require('path') | seldon-example-3.js:38:24:38:55 | path.jo ... y.path) |
 | seldon-example-3.js:11:13:11:21 | express() | seldon-example-3.js:14:1:14:3 | app |
+| seldon-example-3.js:11:13:11:21 | express() | seldon-example-3.js:14:1:14:7 | app.use |
 | seldon-example-3.js:11:13:11:21 | express() | seldon-example-3.js:20:1:20:3 | app |
+| seldon-example-3.js:11:13:11:21 | express() | seldon-example-3.js:20:1:20:8 | app.post |
 | seldon-example-3.js:11:13:11:21 | express() | seldon-example-3.js:35:1:35:3 | app |
+| seldon-example-3.js:11:13:11:21 | express() | seldon-example-3.js:35:1:35:8 | app.post |
 | seldon-example-3.js:11:13:11:21 | express() | seldon-example-3.js:56:1:56:3 | app |
+| seldon-example-3.js:11:13:11:21 | express() | seldon-example-3.js:56:1:56:10 | app.listen |
 | seldon-example-3.js:14:1:14:3 | app | seldon-example-3.js:11:13:11:21 | express() |
 | seldon-example-3.js:14:1:14:3 | app | seldon-example-3.js:20:1:20:3 | app |
 | seldon-example-3.js:14:1:14:3 | app | seldon-example-3.js:35:1:35:3 | app |
@@ -252,7 +287,9 @@
 | seldon-example-3.js:20:27:20:29 | req | seldon-example-3.js:25:32:25:39 | req.body |
 | seldon-example-3.js:20:27:20:29 | req | seldon-example-3.js:25:32:25:48 | req.body.contents |
 | seldon-example-3.js:20:32:20:34 | res | seldon-example-3.js:27:13:27:15 | res |
+| seldon-example-3.js:20:32:20:34 | res | seldon-example-3.js:27:13:27:26 | res.sendStatus |
 | seldon-example-3.js:20:32:20:34 | res | seldon-example-3.js:29:13:29:15 | res |
+| seldon-example-3.js:20:32:20:34 | res | seldon-example-3.js:29:13:29:26 | res.sendStatus |
 | seldon-example-3.js:23:24:23:27 | path | seldon-example-3.js:9:14:9:28 | require('path') |
 | seldon-example-3.js:23:24:23:27 | path | seldon-example-3.js:23:24:23:55 | path.jo ... y.path) |
 | seldon-example-3.js:23:24:23:27 | path | seldon-example-3.js:38:24:38:27 | path |
@@ -282,7 +319,9 @@
 | seldon-example-3.js:35:25:35:27 | req | seldon-example-3.js:43:36:43:43 | req.body |
 | seldon-example-3.js:35:25:35:27 | req | seldon-example-3.js:43:36:43:52 | req.body.contents |
 | seldon-example-3.js:35:30:35:32 | res | seldon-example-3.js:45:17:45:19 | res |
+| seldon-example-3.js:35:30:35:32 | res | seldon-example-3.js:45:17:45:30 | res.sendStatus |
 | seldon-example-3.js:35:30:35:32 | res | seldon-example-3.js:47:17:47:19 | res |
+| seldon-example-3.js:35:30:35:32 | res | seldon-example-3.js:47:17:47:30 | res.sendStatus |
 | seldon-example-3.js:38:24:38:27 | path | seldon-example-3.js:9:14:9:28 | require('path') |
 | seldon-example-3.js:38:24:38:27 | path | seldon-example-3.js:23:24:23:27 | path |
 | seldon-example-3.js:38:24:38:27 | path | seldon-example-3.js:38:24:38:55 | path.jo ... y.path) |
@@ -316,17 +355,26 @@
 | seldon-example-3.js:56:1:56:3 | app | seldon-example-3.js:20:1:20:3 | app |
 | seldon-example-3.js:56:1:56:3 | app | seldon-example-3.js:35:1:35:3 | app |
 | seldon-example-4.js:7:17:7:34 | require('express') | seldon-example-4.js:14:9:14:15 | express |
+| seldon-example-4.js:7:17:7:34 | require('express') | seldon-example-4.js:14:9:14:20 | express.json |
 | seldon-example-4.js:8:12:8:24 | require('fs') | seldon-example-4.js:25:5:25:6 | fs |
+| seldon-example-4.js:8:12:8:24 | require('fs') | seldon-example-4.js:25:5:25:16 | fs.writeFile |
 | seldon-example-4.js:8:12:8:24 | require('fs') | seldon-example-4.js:43:9:43:10 | fs |
+| seldon-example-4.js:8:12:8:24 | require('fs') | seldon-example-4.js:43:9:43:20 | fs.writeFile |
 | seldon-example-4.js:9:14:9:28 | require('path') | seldon-example-4.js:23:24:23:27 | path |
+| seldon-example-4.js:9:14:9:28 | require('path') | seldon-example-4.js:23:24:23:32 | path.join |
 | seldon-example-4.js:9:14:9:28 | require('path') | seldon-example-4.js:23:24:23:55 | path.jo ... y.path) |
 | seldon-example-4.js:9:14:9:28 | require('path') | seldon-example-4.js:25:18:25:29 | resolvedPath |
 | seldon-example-4.js:9:14:9:28 | require('path') | seldon-example-4.js:38:24:38:27 | path |
+| seldon-example-4.js:9:14:9:28 | require('path') | seldon-example-4.js:38:24:38:32 | path.join |
 | seldon-example-4.js:9:14:9:28 | require('path') | seldon-example-4.js:38:24:38:55 | path.jo ... y.path) |
 | seldon-example-4.js:11:13:11:21 | express() | seldon-example-4.js:14:1:14:3 | app |
+| seldon-example-4.js:11:13:11:21 | express() | seldon-example-4.js:14:1:14:7 | app.use |
 | seldon-example-4.js:11:13:11:21 | express() | seldon-example-4.js:20:1:20:3 | app |
+| seldon-example-4.js:11:13:11:21 | express() | seldon-example-4.js:20:1:20:8 | app.post |
 | seldon-example-4.js:11:13:11:21 | express() | seldon-example-4.js:35:1:35:3 | app |
+| seldon-example-4.js:11:13:11:21 | express() | seldon-example-4.js:35:1:35:8 | app.post |
 | seldon-example-4.js:11:13:11:21 | express() | seldon-example-4.js:58:1:58:3 | app |
+| seldon-example-4.js:11:13:11:21 | express() | seldon-example-4.js:58:1:58:10 | app.listen |
 | seldon-example-4.js:14:1:14:3 | app | seldon-example-4.js:11:13:11:21 | express() |
 | seldon-example-4.js:14:1:14:3 | app | seldon-example-4.js:20:1:20:3 | app |
 | seldon-example-4.js:14:1:14:3 | app | seldon-example-4.js:35:1:35:3 | app |
@@ -357,7 +405,9 @@
 | seldon-example-4.js:20:27:20:29 | req | seldon-example-4.js:25:32:25:39 | req.body |
 | seldon-example-4.js:20:27:20:29 | req | seldon-example-4.js:25:32:25:48 | req.body.contents |
 | seldon-example-4.js:20:32:20:34 | res | seldon-example-4.js:27:13:27:15 | res |
+| seldon-example-4.js:20:32:20:34 | res | seldon-example-4.js:27:13:27:26 | res.sendStatus |
 | seldon-example-4.js:20:32:20:34 | res | seldon-example-4.js:29:13:29:15 | res |
+| seldon-example-4.js:20:32:20:34 | res | seldon-example-4.js:29:13:29:26 | res.sendStatus |
 | seldon-example-4.js:23:24:23:27 | path | seldon-example-4.js:9:14:9:28 | require('path') |
 | seldon-example-4.js:23:24:23:27 | path | seldon-example-4.js:23:24:23:55 | path.jo ... y.path) |
 | seldon-example-4.js:23:24:23:27 | path | seldon-example-4.js:38:24:38:27 | path |
@@ -387,7 +437,9 @@
 | seldon-example-4.js:35:25:35:27 | req | seldon-example-4.js:43:36:43:43 | req.body |
 | seldon-example-4.js:35:25:35:27 | req | seldon-example-4.js:43:36:43:52 | req.body.contents |
 | seldon-example-4.js:35:30:35:32 | res | seldon-example-4.js:45:17:45:19 | res |
+| seldon-example-4.js:35:30:35:32 | res | seldon-example-4.js:45:17:45:30 | res.sendStatus |
 | seldon-example-4.js:35:30:35:32 | res | seldon-example-4.js:47:17:47:19 | res |
+| seldon-example-4.js:35:30:35:32 | res | seldon-example-4.js:47:17:47:30 | res.sendStatus |
 | seldon-example-4.js:38:24:38:27 | path | seldon-example-4.js:9:14:9:28 | require('path') |
 | seldon-example-4.js:38:24:38:27 | path | seldon-example-4.js:23:24:23:27 | path |
 | seldon-example-4.js:38:24:38:27 | path | seldon-example-4.js:38:24:38:55 | path.jo ... y.path) |
@@ -418,13 +470,17 @@
 | seldon-example-4.js:52:23:52:26 | path | seldon-example-4.js:40:20:40:45 | sanitiz ... edPath) |
 | seldon-example-4.js:52:23:52:26 | path | seldon-example-4.js:43:22:43:33 | resolvedPath |
 | seldon-example-4.js:52:23:52:26 | path | seldon-example-4.js:53:9:53:46 | new Reg ... .sep}`) |
+| seldon-example-4.js:52:23:52:26 | path | seldon-example-4.js:53:9:53:51 | new Reg ... `).test |
 | seldon-example-4.js:52:23:52:26 | path | seldon-example-4.js:53:20:53:45 | `${path ... h.sep}` |
 | seldon-example-4.js:52:23:52:26 | path | seldon-example-4.js:53:23:53:30 | path.sep |
 | seldon-example-4.js:52:23:52:26 | path | seldon-example-4.js:53:36:53:43 | path.sep |
 | seldon-example-4.js:52:23:52:26 | path | seldon-example-4.js:53:53:53:56 | path |
+| seldon-example-4.js:53:9:53:46 | new Reg ... .sep}`) | seldon-example-4.js:53:9:53:51 | new Reg ... `).test |
 | seldon-example-4.js:53:23:53:30 | path.sep | seldon-example-4.js:53:9:53:46 | new Reg ... .sep}`) |
+| seldon-example-4.js:53:23:53:30 | path.sep | seldon-example-4.js:53:9:53:51 | new Reg ... `).test |
 | seldon-example-4.js:53:23:53:30 | path.sep | seldon-example-4.js:53:20:53:45 | `${path ... h.sep}` |
 | seldon-example-4.js:53:36:53:43 | path.sep | seldon-example-4.js:53:9:53:46 | new Reg ... .sep}`) |
+| seldon-example-4.js:53:36:53:43 | path.sep | seldon-example-4.js:53:9:53:51 | new Reg ... `).test |
 | seldon-example-4.js:53:36:53:43 | path.sep | seldon-example-4.js:53:20:53:45 | `${path ... h.sep}` |
 | seldon-example-4.js:53:53:53:56 | path | seldon-example-4.js:38:24:38:55 | path.jo ... y.path) |
 | seldon-example-4.js:53:53:53:56 | path | seldon-example-4.js:40:20:40:45 | sanitiz ... edPath) |

@@ -28,8 +28,7 @@ module PropagationGraph {
           guard(nd, _)
         )
         or
-        nd instanceof DataFlow::PropRead and
-        taintStep(nd, _)
+        nd instanceof DataFlow::PropRead
         or
         nd instanceof DataFlow::ParameterNode and
         taintStep(nd, _)
@@ -39,7 +38,7 @@ module PropagationGraph {
           or
           nd = invk.(DataFlow::MethodCallNode).getReceiver()
         ) and
-        taintStep(_, nd)
+        (taintStep(_, nd) or nd instanceof DataFlow::PropRead)
       ) and
       isRelevant(nd)
     }
