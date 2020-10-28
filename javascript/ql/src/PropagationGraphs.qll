@@ -210,12 +210,17 @@ module PropagationGraph {
 
   /**
    * An allocation site as tracked by the points-to analysis, that is,
-   * an unresolvable call.
+   * an unresolvable call, or a parameter to a callback function passed as an argument
+   * to an unresolvable function
    */
-  private class AllocationSite extends DataFlow::InvokeNode {
+  private class AllocationSite extends DataFlow::Node {
     AllocationSite() {
       getBasicBlock() instanceof ReachableBasicBlock and
-      not calls(this, _)
+      exists(DataFlow::InvokeNode invk | not calls(invk, _) |
+        this = invk
+        or
+        this = invk.getABoundCallbackParameter(_, _)
+      )
     }
   }
 
