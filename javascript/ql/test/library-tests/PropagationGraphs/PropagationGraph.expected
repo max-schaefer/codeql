@@ -1,0 +1,93 @@
+| seldon-example-1.js:9:14:9:28 | require('path') | seldon-example-1.js:23:24:23:55 | path.jo ... y.path) | seldon-example-1.js:25:18:25:29 | resolvedPath |
+| seldon-example-1.js:9:14:9:28 | require('path') | seldon-example-1.js:38:24:38:55 | path.jo ... y.path) | seldon-example-1.js:43:22:43:33 | resolvedPath |
+| seldon-example-1.js:16:16:16:26 | process.env | seldon-example-1.js:23:24:23:55 | path.jo ... y.path) | seldon-example-1.js:25:18:25:29 | resolvedPath |
+| seldon-example-1.js:16:16:16:26 | process.env | seldon-example-1.js:38:24:38:55 | path.jo ... y.path) | seldon-example-1.js:43:22:43:33 | resolvedPath |
+| seldon-example-1.js:16:16:16:35 | process.env.APP_PATH | seldon-example-1.js:23:24:23:55 | path.jo ... y.path) | seldon-example-1.js:25:18:25:29 | resolvedPath |
+| seldon-example-1.js:16:16:16:35 | process.env.APP_PATH | seldon-example-1.js:38:24:38:55 | path.jo ... y.path) | seldon-example-1.js:43:22:43:33 | resolvedPath |
+| seldon-example-1.js:20:27:20:29 | req | seldon-example-1.js:23:24:23:55 | path.jo ... y.path) | seldon-example-1.js:25:18:25:29 | resolvedPath |
+| seldon-example-1.js:23:42:23:49 | req.body | seldon-example-1.js:23:24:23:55 | path.jo ... y.path) | seldon-example-1.js:25:18:25:29 | resolvedPath |
+| seldon-example-1.js:23:42:23:54 | req.body.path | seldon-example-1.js:23:24:23:55 | path.jo ... y.path) | seldon-example-1.js:25:18:25:29 | resolvedPath |
+| seldon-example-1.js:35:25:35:27 | req | seldon-example-1.js:38:24:38:55 | path.jo ... y.path) | seldon-example-1.js:43:22:43:33 | resolvedPath |
+| seldon-example-1.js:38:42:38:49 | req.body | seldon-example-1.js:38:24:38:55 | path.jo ... y.path) | seldon-example-1.js:43:22:43:33 | resolvedPath |
+| seldon-example-1.js:38:42:38:54 | req.body.path | seldon-example-1.js:38:24:38:55 | path.jo ... y.path) | seldon-example-1.js:43:22:43:33 | resolvedPath |
+| seldon-example-1.js:52:23:52:26 | path | seldon-example-1.js:38:24:38:55 | path.jo ... y.path) | seldon-example-1.js:43:22:43:33 | resolvedPath |
+| seldon-example-2.js:9:14:9:28 | require('path') | seldon-example-2.js:23:24:23:55 | path.jo ... y.path) | seldon-example-2.js:25:18:25:29 | resolvedPath |
+| seldon-example-2.js:9:14:9:28 | require('path') | seldon-example-2.js:38:24:38:55 | path.jo ... y.path) | seldon-example-2.js:40:45:40:56 | resolvedPath |
+| seldon-example-2.js:9:14:9:28 | require('path') | seldon-example-2.js:38:24:38:55 | path.jo ... y.path) | seldon-example-2.js:43:22:43:33 | resolvedPath |
+| seldon-example-2.js:9:14:9:28 | require('path') | seldon-example-2.js:40:20:40:57 | require ... edPath) | seldon-example-2.js:43:22:43:33 | resolvedPath |
+| seldon-example-2.js:16:16:16:26 | process.env | seldon-example-2.js:23:24:23:55 | path.jo ... y.path) | seldon-example-2.js:25:18:25:29 | resolvedPath |
+| seldon-example-2.js:16:16:16:26 | process.env | seldon-example-2.js:38:24:38:55 | path.jo ... y.path) | seldon-example-2.js:40:45:40:56 | resolvedPath |
+| seldon-example-2.js:16:16:16:26 | process.env | seldon-example-2.js:38:24:38:55 | path.jo ... y.path) | seldon-example-2.js:43:22:43:33 | resolvedPath |
+| seldon-example-2.js:16:16:16:26 | process.env | seldon-example-2.js:40:20:40:57 | require ... edPath) | seldon-example-2.js:43:22:43:33 | resolvedPath |
+| seldon-example-2.js:16:16:16:35 | process.env.APP_PATH | seldon-example-2.js:23:24:23:55 | path.jo ... y.path) | seldon-example-2.js:25:18:25:29 | resolvedPath |
+| seldon-example-2.js:16:16:16:35 | process.env.APP_PATH | seldon-example-2.js:38:24:38:55 | path.jo ... y.path) | seldon-example-2.js:40:45:40:56 | resolvedPath |
+| seldon-example-2.js:16:16:16:35 | process.env.APP_PATH | seldon-example-2.js:38:24:38:55 | path.jo ... y.path) | seldon-example-2.js:43:22:43:33 | resolvedPath |
+| seldon-example-2.js:16:16:16:35 | process.env.APP_PATH | seldon-example-2.js:40:20:40:57 | require ... edPath) | seldon-example-2.js:43:22:43:33 | resolvedPath |
+| seldon-example-2.js:20:27:20:29 | req | seldon-example-2.js:23:24:23:55 | path.jo ... y.path) | seldon-example-2.js:25:18:25:29 | resolvedPath |
+| seldon-example-2.js:23:42:23:49 | req.body | seldon-example-2.js:23:24:23:55 | path.jo ... y.path) | seldon-example-2.js:25:18:25:29 | resolvedPath |
+| seldon-example-2.js:23:42:23:54 | req.body.path | seldon-example-2.js:23:24:23:55 | path.jo ... y.path) | seldon-example-2.js:25:18:25:29 | resolvedPath |
+| seldon-example-2.js:35:25:35:27 | req | seldon-example-2.js:38:24:38:55 | path.jo ... y.path) | seldon-example-2.js:40:45:40:56 | resolvedPath |
+| seldon-example-2.js:35:25:35:27 | req | seldon-example-2.js:38:24:38:55 | path.jo ... y.path) | seldon-example-2.js:43:22:43:33 | resolvedPath |
+| seldon-example-2.js:35:25:35:27 | req | seldon-example-2.js:40:20:40:57 | require ... edPath) | seldon-example-2.js:43:22:43:33 | resolvedPath |
+| seldon-example-2.js:38:24:38:55 | path.jo ... y.path) | seldon-example-2.js:40:20:40:57 | require ... edPath) | seldon-example-2.js:43:22:43:33 | resolvedPath |
+| seldon-example-2.js:38:42:38:49 | req.body | seldon-example-2.js:38:24:38:55 | path.jo ... y.path) | seldon-example-2.js:40:45:40:56 | resolvedPath |
+| seldon-example-2.js:38:42:38:49 | req.body | seldon-example-2.js:38:24:38:55 | path.jo ... y.path) | seldon-example-2.js:43:22:43:33 | resolvedPath |
+| seldon-example-2.js:38:42:38:49 | req.body | seldon-example-2.js:40:20:40:57 | require ... edPath) | seldon-example-2.js:43:22:43:33 | resolvedPath |
+| seldon-example-2.js:38:42:38:54 | req.body.path | seldon-example-2.js:38:24:38:55 | path.jo ... y.path) | seldon-example-2.js:40:45:40:56 | resolvedPath |
+| seldon-example-2.js:38:42:38:54 | req.body.path | seldon-example-2.js:38:24:38:55 | path.jo ... y.path) | seldon-example-2.js:43:22:43:33 | resolvedPath |
+| seldon-example-2.js:38:42:38:54 | req.body.path | seldon-example-2.js:40:20:40:57 | require ... edPath) | seldon-example-2.js:43:22:43:33 | resolvedPath |
+| seldon-example-3.js:9:14:9:28 | require('path') | seldon-example-3.js:23:24:23:55 | path.jo ... y.path) | seldon-example-3.js:25:18:25:29 | resolvedPath |
+| seldon-example-3.js:9:14:9:28 | require('path') | seldon-example-3.js:38:24:38:55 | path.jo ... y.path) | seldon-example-3.js:43:22:43:33 | resolvedPath |
+| seldon-example-3.js:9:14:9:28 | require('path') | seldon-example-3.js:38:24:38:55 | path.jo ... y.path) | seldon-example-3.js:53:37:53:40 | path |
+| seldon-example-3.js:9:14:9:28 | require('path') | seldon-example-3.js:53:12:53:41 | require ... )(path) | seldon-example-3.js:43:22:43:33 | resolvedPath |
+| seldon-example-3.js:16:16:16:26 | process.env | seldon-example-3.js:23:24:23:55 | path.jo ... y.path) | seldon-example-3.js:25:18:25:29 | resolvedPath |
+| seldon-example-3.js:16:16:16:26 | process.env | seldon-example-3.js:38:24:38:55 | path.jo ... y.path) | seldon-example-3.js:43:22:43:33 | resolvedPath |
+| seldon-example-3.js:16:16:16:26 | process.env | seldon-example-3.js:38:24:38:55 | path.jo ... y.path) | seldon-example-3.js:53:37:53:40 | path |
+| seldon-example-3.js:16:16:16:26 | process.env | seldon-example-3.js:53:12:53:41 | require ... )(path) | seldon-example-3.js:43:22:43:33 | resolvedPath |
+| seldon-example-3.js:16:16:16:35 | process.env.APP_PATH | seldon-example-3.js:23:24:23:55 | path.jo ... y.path) | seldon-example-3.js:25:18:25:29 | resolvedPath |
+| seldon-example-3.js:16:16:16:35 | process.env.APP_PATH | seldon-example-3.js:38:24:38:55 | path.jo ... y.path) | seldon-example-3.js:43:22:43:33 | resolvedPath |
+| seldon-example-3.js:16:16:16:35 | process.env.APP_PATH | seldon-example-3.js:38:24:38:55 | path.jo ... y.path) | seldon-example-3.js:53:37:53:40 | path |
+| seldon-example-3.js:16:16:16:35 | process.env.APP_PATH | seldon-example-3.js:53:12:53:41 | require ... )(path) | seldon-example-3.js:43:22:43:33 | resolvedPath |
+| seldon-example-3.js:20:27:20:29 | req | seldon-example-3.js:23:24:23:55 | path.jo ... y.path) | seldon-example-3.js:25:18:25:29 | resolvedPath |
+| seldon-example-3.js:23:42:23:49 | req.body | seldon-example-3.js:23:24:23:55 | path.jo ... y.path) | seldon-example-3.js:25:18:25:29 | resolvedPath |
+| seldon-example-3.js:23:42:23:54 | req.body.path | seldon-example-3.js:23:24:23:55 | path.jo ... y.path) | seldon-example-3.js:25:18:25:29 | resolvedPath |
+| seldon-example-3.js:35:25:35:27 | req | seldon-example-3.js:38:24:38:55 | path.jo ... y.path) | seldon-example-3.js:43:22:43:33 | resolvedPath |
+| seldon-example-3.js:35:25:35:27 | req | seldon-example-3.js:38:24:38:55 | path.jo ... y.path) | seldon-example-3.js:53:37:53:40 | path |
+| seldon-example-3.js:35:25:35:27 | req | seldon-example-3.js:53:12:53:41 | require ... )(path) | seldon-example-3.js:43:22:43:33 | resolvedPath |
+| seldon-example-3.js:38:24:38:55 | path.jo ... y.path) | seldon-example-3.js:53:12:53:41 | require ... )(path) | seldon-example-3.js:43:22:43:33 | resolvedPath |
+| seldon-example-3.js:38:42:38:49 | req.body | seldon-example-3.js:38:24:38:55 | path.jo ... y.path) | seldon-example-3.js:43:22:43:33 | resolvedPath |
+| seldon-example-3.js:38:42:38:49 | req.body | seldon-example-3.js:38:24:38:55 | path.jo ... y.path) | seldon-example-3.js:53:37:53:40 | path |
+| seldon-example-3.js:38:42:38:49 | req.body | seldon-example-3.js:53:12:53:41 | require ... )(path) | seldon-example-3.js:43:22:43:33 | resolvedPath |
+| seldon-example-3.js:38:42:38:54 | req.body.path | seldon-example-3.js:38:24:38:55 | path.jo ... y.path) | seldon-example-3.js:43:22:43:33 | resolvedPath |
+| seldon-example-3.js:38:42:38:54 | req.body.path | seldon-example-3.js:38:24:38:55 | path.jo ... y.path) | seldon-example-3.js:53:37:53:40 | path |
+| seldon-example-3.js:38:42:38:54 | req.body.path | seldon-example-3.js:53:12:53:41 | require ... )(path) | seldon-example-3.js:43:22:43:33 | resolvedPath |
+| seldon-example-3.js:52:23:52:26 | path | seldon-example-3.js:38:24:38:55 | path.jo ... y.path) | seldon-example-3.js:43:22:43:33 | resolvedPath |
+| seldon-example-3.js:52:23:52:26 | path | seldon-example-3.js:38:24:38:55 | path.jo ... y.path) | seldon-example-3.js:53:37:53:40 | path |
+| seldon-example-3.js:52:23:52:26 | path | seldon-example-3.js:53:12:53:41 | require ... )(path) | seldon-example-3.js:43:22:43:33 | resolvedPath |
+| seldon-example-4.js:9:14:9:28 | require('path') | seldon-example-4.js:23:24:23:55 | path.jo ... y.path) | seldon-example-4.js:25:18:25:29 | resolvedPath |
+| seldon-example-4.js:9:14:9:28 | require('path') | seldon-example-4.js:38:24:38:55 | path.jo ... y.path) | seldon-example-4.js:43:22:43:33 | resolvedPath |
+| seldon-example-4.js:9:14:9:28 | require('path') | seldon-example-4.js:38:24:38:55 | path.jo ... y.path) | seldon-example-4.js:53:20:53:45 | `${path ... h.sep}` |
+| seldon-example-4.js:9:14:9:28 | require('path') | seldon-example-4.js:38:24:38:55 | path.jo ... y.path) | seldon-example-4.js:53:53:53:56 | path |
+| seldon-example-4.js:16:16:16:26 | process.env | seldon-example-4.js:23:24:23:55 | path.jo ... y.path) | seldon-example-4.js:25:18:25:29 | resolvedPath |
+| seldon-example-4.js:16:16:16:26 | process.env | seldon-example-4.js:38:24:38:55 | path.jo ... y.path) | seldon-example-4.js:43:22:43:33 | resolvedPath |
+| seldon-example-4.js:16:16:16:26 | process.env | seldon-example-4.js:38:24:38:55 | path.jo ... y.path) | seldon-example-4.js:53:20:53:45 | `${path ... h.sep}` |
+| seldon-example-4.js:16:16:16:26 | process.env | seldon-example-4.js:38:24:38:55 | path.jo ... y.path) | seldon-example-4.js:53:53:53:56 | path |
+| seldon-example-4.js:16:16:16:35 | process.env.APP_PATH | seldon-example-4.js:23:24:23:55 | path.jo ... y.path) | seldon-example-4.js:25:18:25:29 | resolvedPath |
+| seldon-example-4.js:16:16:16:35 | process.env.APP_PATH | seldon-example-4.js:38:24:38:55 | path.jo ... y.path) | seldon-example-4.js:43:22:43:33 | resolvedPath |
+| seldon-example-4.js:16:16:16:35 | process.env.APP_PATH | seldon-example-4.js:38:24:38:55 | path.jo ... y.path) | seldon-example-4.js:53:20:53:45 | `${path ... h.sep}` |
+| seldon-example-4.js:16:16:16:35 | process.env.APP_PATH | seldon-example-4.js:38:24:38:55 | path.jo ... y.path) | seldon-example-4.js:53:53:53:56 | path |
+| seldon-example-4.js:20:27:20:29 | req | seldon-example-4.js:23:24:23:55 | path.jo ... y.path) | seldon-example-4.js:25:18:25:29 | resolvedPath |
+| seldon-example-4.js:23:42:23:49 | req.body | seldon-example-4.js:23:24:23:55 | path.jo ... y.path) | seldon-example-4.js:25:18:25:29 | resolvedPath |
+| seldon-example-4.js:23:42:23:54 | req.body.path | seldon-example-4.js:23:24:23:55 | path.jo ... y.path) | seldon-example-4.js:25:18:25:29 | resolvedPath |
+| seldon-example-4.js:35:25:35:27 | req | seldon-example-4.js:38:24:38:55 | path.jo ... y.path) | seldon-example-4.js:43:22:43:33 | resolvedPath |
+| seldon-example-4.js:35:25:35:27 | req | seldon-example-4.js:38:24:38:55 | path.jo ... y.path) | seldon-example-4.js:53:20:53:45 | `${path ... h.sep}` |
+| seldon-example-4.js:35:25:35:27 | req | seldon-example-4.js:38:24:38:55 | path.jo ... y.path) | seldon-example-4.js:53:53:53:56 | path |
+| seldon-example-4.js:38:42:38:49 | req.body | seldon-example-4.js:38:24:38:55 | path.jo ... y.path) | seldon-example-4.js:43:22:43:33 | resolvedPath |
+| seldon-example-4.js:38:42:38:49 | req.body | seldon-example-4.js:38:24:38:55 | path.jo ... y.path) | seldon-example-4.js:53:20:53:45 | `${path ... h.sep}` |
+| seldon-example-4.js:38:42:38:49 | req.body | seldon-example-4.js:38:24:38:55 | path.jo ... y.path) | seldon-example-4.js:53:53:53:56 | path |
+| seldon-example-4.js:38:42:38:54 | req.body.path | seldon-example-4.js:38:24:38:55 | path.jo ... y.path) | seldon-example-4.js:43:22:43:33 | resolvedPath |
+| seldon-example-4.js:38:42:38:54 | req.body.path | seldon-example-4.js:38:24:38:55 | path.jo ... y.path) | seldon-example-4.js:53:20:53:45 | `${path ... h.sep}` |
+| seldon-example-4.js:38:42:38:54 | req.body.path | seldon-example-4.js:38:24:38:55 | path.jo ... y.path) | seldon-example-4.js:53:53:53:56 | path |
+| seldon-example-4.js:52:23:52:26 | path | seldon-example-4.js:38:24:38:55 | path.jo ... y.path) | seldon-example-4.js:43:22:43:33 | resolvedPath |
+| seldon-example-4.js:52:23:52:26 | path | seldon-example-4.js:38:24:38:55 | path.jo ... y.path) | seldon-example-4.js:53:20:53:45 | `${path ... h.sep}` |
+| seldon-example-4.js:52:23:52:26 | path | seldon-example-4.js:38:24:38:55 | path.jo ... y.path) | seldon-example-4.js:53:53:53:56 | path |
