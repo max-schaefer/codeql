@@ -109,7 +109,7 @@ string candidateRep(DataFlow::Node nd, int depth, boolean asRhs) {
         nd = base.(DataFlow::FunctionNode).getParameter(i) and
         asRhs = false
         or
-        nd = base.(DataFlow::InvokeNode).getArgument(i) and
+        nd = base.getAnInvocation().getArgument(i) and
         asRhs = true
       |
         p = i.toString()
