@@ -52,3 +52,12 @@ app.post('/sanitized', (req, res) => {
 app.listen(port, () => {
     console.log(`Application listening on port ${port}...`);
 });
+
+// make sure we have enough occurrences of the representations we care about
+(function() {
+    require('sanitize-path')();
+    require('sanitize-path')();
+    require('sanitize-path')();
+    require('sanitize-path')();
+    require('sanitize-path')();
+})

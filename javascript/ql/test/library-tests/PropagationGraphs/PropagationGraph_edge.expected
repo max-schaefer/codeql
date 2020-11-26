@@ -490,3 +490,8 @@
 | seldon-example-4.js:58:1:58:3 | app | seldon-example-4.js:14:1:14:3 | app |
 | seldon-example-4.js:58:1:58:3 | app | seldon-example-4.js:20:1:20:3 | app |
 | seldon-example-4.js:58:1:58:3 | app | seldon-example-4.js:35:1:35:3 | app |
+| seldon-example-4.js:64:5:64:18 | new RegExp("") | seldon-example-4.js:64:5:64:23 | new RegExp("").test |
+| seldon-example-4.js:65:5:65:18 | new RegExp("") | seldon-example-4.js:65:5:65:23 | new RegExp("").test |
+| seldon-example-4.js:66:5:66:18 | new RegExp("") | seldon-example-4.js:66:5:66:23 | new RegExp("").test |
+| seldon-example-4.js:67:5:67:18 | new RegExp("") | seldon-example-4.js:67:5:67:23 | new RegExp("").test |
+| seldon-example-4.js:68:5:68:18 | new RegExp("") | seldon-example-4.js:68:5:68:23 | new RegExp("").test |
