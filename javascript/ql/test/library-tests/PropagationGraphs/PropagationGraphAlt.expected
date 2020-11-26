@@ -1,0 +1,48 @@
+| (parameter 0 (parameter 1 (member post (return (root https://www.npmjs.com/package/express))))) | (return (member join (root https://www.npmjs.com/package/path))) | (parameter 0 (member writeFile (root https://www.npmjs.com/package/fs))) |
+| (parameter 0 (parameter 1 (member post (return (root https://www.npmjs.com/package/express))))) | (return (member join (root https://www.npmjs.com/package/path))) | (parameter 0 (member writeFile *)) |
+| (parameter 0 (parameter 1 (member post (return (root https://www.npmjs.com/package/express))))) | (return (member join *)) | (parameter 0 (member writeFile (root https://www.npmjs.com/package/fs))) |
+| (parameter 0 (parameter 1 (member post (return (root https://www.npmjs.com/package/express))))) | (return (member join *)) | (parameter 0 (member writeFile *)) |
+| (parameter 0 (parameter 1 (member post (return (root https://www.npmjs.com/package/express))))) | (return (member test (instance (member RegExp (global))))) | (parameter 0 (member writeFile (root https://www.npmjs.com/package/fs))) |
+| (parameter 0 (parameter 1 (member post (return (root https://www.npmjs.com/package/express))))) | (return (member test (instance (member RegExp (global))))) | (parameter 0 (member writeFile *)) |
+| (parameter 0 (parameter 1 (member post (return (root https://www.npmjs.com/package/express))))) | (return (member test (return (member RegExp (global))))) | (parameter 0 (member writeFile (root https://www.npmjs.com/package/fs))) |
+| (parameter 0 (parameter 1 (member post (return (root https://www.npmjs.com/package/express))))) | (return (member test (return (member RegExp (global))))) | (parameter 0 (member writeFile *)) |
+| (parameter 0 (parameter 1 (member post (return (root https://www.npmjs.com/package/express))))) | (return (member test *)) | (parameter 0 (member writeFile (root https://www.npmjs.com/package/fs))) |
+| (parameter 0 (parameter 1 (member post (return (root https://www.npmjs.com/package/express))))) | (return (member test *)) | (parameter 0 (member writeFile *)) |
+| (parameter 0 (parameter 1 (member post (return (root https://www.npmjs.com/package/express))))) | (return (root https://www.npmjs.com/package/sanitize-path)) | (parameter 0 (member writeFile (root https://www.npmjs.com/package/fs))) |
+| (parameter 0 (parameter 1 (member post (return (root https://www.npmjs.com/package/express))))) | (return (root https://www.npmjs.com/package/sanitize-path)) | (parameter 0 (member writeFile *)) |
+| (parameter 0 (parameter 1 (member post *))) | (return (member join (root https://www.npmjs.com/package/path))) | (parameter 0 (member writeFile (root https://www.npmjs.com/package/fs))) |
+| (parameter 0 (parameter 1 (member post *))) | (return (member join (root https://www.npmjs.com/package/path))) | (parameter 0 (member writeFile *)) |
+| (parameter 0 (parameter 1 (member post *))) | (return (member join *)) | (parameter 0 (member writeFile (root https://www.npmjs.com/package/fs))) |
+| (parameter 0 (parameter 1 (member post *))) | (return (member join *)) | (parameter 0 (member writeFile *)) |
+| (parameter 0 (parameter 1 (member post *))) | (return (member test (instance (member RegExp (global))))) | (parameter 0 (member writeFile (root https://www.npmjs.com/package/fs))) |
+| (parameter 0 (parameter 1 (member post *))) | (return (member test (instance (member RegExp (global))))) | (parameter 0 (member writeFile *)) |
+| (parameter 0 (parameter 1 (member post *))) | (return (member test (return (member RegExp (global))))) | (parameter 0 (member writeFile (root https://www.npmjs.com/package/fs))) |
+| (parameter 0 (parameter 1 (member post *))) | (return (member test (return (member RegExp (global))))) | (parameter 0 (member writeFile *)) |
+| (parameter 0 (parameter 1 (member post *))) | (return (member test *)) | (parameter 0 (member writeFile (root https://www.npmjs.com/package/fs))) |
+| (parameter 0 (parameter 1 (member post *))) | (return (member test *)) | (parameter 0 (member writeFile *)) |
+| (parameter 0 (parameter 1 (member post *))) | (return (root https://www.npmjs.com/package/sanitize-path)) | (parameter 0 (member writeFile (root https://www.npmjs.com/package/fs))) |
+| (parameter 0 (parameter 1 (member post *))) | (return (root https://www.npmjs.com/package/sanitize-path)) | (parameter 0 (member writeFile *)) |
+| (parameter req (parameter 1 (member post (return (root https://www.npmjs.com/package/express))))) | (return (member join (root https://www.npmjs.com/package/path))) | (parameter 0 (member writeFile (root https://www.npmjs.com/package/fs))) |
+| (parameter req (parameter 1 (member post (return (root https://www.npmjs.com/package/express))))) | (return (member join (root https://www.npmjs.com/package/path))) | (parameter 0 (member writeFile *)) |
+| (parameter req (parameter 1 (member post (return (root https://www.npmjs.com/package/express))))) | (return (member join *)) | (parameter 0 (member writeFile (root https://www.npmjs.com/package/fs))) |
+| (parameter req (parameter 1 (member post (return (root https://www.npmjs.com/package/express))))) | (return (member join *)) | (parameter 0 (member writeFile *)) |
+| (parameter req (parameter 1 (member post (return (root https://www.npmjs.com/package/express))))) | (return (member test (instance (member RegExp (global))))) | (parameter 0 (member writeFile (root https://www.npmjs.com/package/fs))) |
+| (parameter req (parameter 1 (member post (return (root https://www.npmjs.com/package/express))))) | (return (member test (instance (member RegExp (global))))) | (parameter 0 (member writeFile *)) |
+| (parameter req (parameter 1 (member post (return (root https://www.npmjs.com/package/express))))) | (return (member test (return (member RegExp (global))))) | (parameter 0 (member writeFile (root https://www.npmjs.com/package/fs))) |
+| (parameter req (parameter 1 (member post (return (root https://www.npmjs.com/package/express))))) | (return (member test (return (member RegExp (global))))) | (parameter 0 (member writeFile *)) |
+| (parameter req (parameter 1 (member post (return (root https://www.npmjs.com/package/express))))) | (return (member test *)) | (parameter 0 (member writeFile (root https://www.npmjs.com/package/fs))) |
+| (parameter req (parameter 1 (member post (return (root https://www.npmjs.com/package/express))))) | (return (member test *)) | (parameter 0 (member writeFile *)) |
+| (parameter req (parameter 1 (member post (return (root https://www.npmjs.com/package/express))))) | (return (root https://www.npmjs.com/package/sanitize-path)) | (parameter 0 (member writeFile (root https://www.npmjs.com/package/fs))) |
+| (parameter req (parameter 1 (member post (return (root https://www.npmjs.com/package/express))))) | (return (root https://www.npmjs.com/package/sanitize-path)) | (parameter 0 (member writeFile *)) |
+| (parameter req (parameter 1 (member post *))) | (return (member join (root https://www.npmjs.com/package/path))) | (parameter 0 (member writeFile (root https://www.npmjs.com/package/fs))) |
+| (parameter req (parameter 1 (member post *))) | (return (member join (root https://www.npmjs.com/package/path))) | (parameter 0 (member writeFile *)) |
+| (parameter req (parameter 1 (member post *))) | (return (member join *)) | (parameter 0 (member writeFile (root https://www.npmjs.com/package/fs))) |
+| (parameter req (parameter 1 (member post *))) | (return (member join *)) | (parameter 0 (member writeFile *)) |
+| (parameter req (parameter 1 (member post *))) | (return (member test (instance (member RegExp (global))))) | (parameter 0 (member writeFile (root https://www.npmjs.com/package/fs))) |
+| (parameter req (parameter 1 (member post *))) | (return (member test (instance (member RegExp (global))))) | (parameter 0 (member writeFile *)) |
+| (parameter req (parameter 1 (member post *))) | (return (member test (return (member RegExp (global))))) | (parameter 0 (member writeFile (root https://www.npmjs.com/package/fs))) |
+| (parameter req (parameter 1 (member post *))) | (return (member test (return (member RegExp (global))))) | (parameter 0 (member writeFile *)) |
+| (parameter req (parameter 1 (member post *))) | (return (member test *)) | (parameter 0 (member writeFile (root https://www.npmjs.com/package/fs))) |
+| (parameter req (parameter 1 (member post *))) | (return (member test *)) | (parameter 0 (member writeFile *)) |
+| (parameter req (parameter 1 (member post *))) | (return (root https://www.npmjs.com/package/sanitize-path)) | (parameter 0 (member writeFile (root https://www.npmjs.com/package/fs))) |
+| (parameter req (parameter 1 (member post *))) | (return (root https://www.npmjs.com/package/sanitize-path)) | (parameter 0 (member writeFile *)) |

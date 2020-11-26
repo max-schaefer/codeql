@@ -110,14 +110,9 @@ predicate isSourceCandidate(API::Node nd, DataFlow::Node u) {
 /**
  * Holds if `u` is a candidate for a sanitiser.
  */
-predicate isSanitizerCandidate(API::Node nd, DataFlow::Node u) {
-  mayComeFromLibrary(nd) and
+predicate isSanitizerCandidate(DataFlow::CallNode u) {
   exists(rep(u, false)) and
-  (
-    u = nd.getACall()
-    or
-    guard(nd.getACall(), u)
-  )
+  not u = any(Import i).getImportedModuleNode()
 }
 
 /**
@@ -147,6 +142,8 @@ predicate step(DataFlow::Node pred, DataFlow::Node succ) {
   succ.(DataFlow::SourceNode).hasPropertyWrite(_, pred)
   or
   succ.(DataFlow::CallNode).getAnArgument() = pred
+  or
+  guard(pred, succ)
 }
 
 /**
@@ -166,26 +163,25 @@ DataFlow::Node reachableFromSourceCandidate(DataFlow::Node src, DataFlow::TypeTr
  * Gets a node that is reachable from a source candidate through a sanitiser candidate
  * in the propagation graph.
  */
-DataFlow::Node reachableFromSourceSanitizerCandidatePair(
-  DataFlow::Node src, DataFlow::Node san, DataFlow::TypeTracker t
-) {
-  result = reachableFromSourceCandidate(src, t) and
-  isSanitizerCandidate(_, result) and
-  san = result and
-  src != san
+DataFlow::Node reachableFromSanitizerCandidate(DataFlow::Node san, DataFlow::TypeTracker t) {
+  isSanitizerCandidate(san) and
+  exists(DataFlow::Node src |
+    san = reachableFromSourceCandidate(src, DataFlow::TypeTracker::end()) and
+    src != san
+  ) and
+  result = san and
+  t.start()
   or
-  step(reachableFromSourceSanitizerCandidatePair(src, san, t), result)
+  step(reachableFromSanitizerCandidate(san, t), result)
   or
-  exists(StepSummary summary | t = aux(src, san, result, summary).append(summary))
+  exists(StepSummary summary | t = aux(san, result, summary).append(summary))
 }
 
 private import semmle.javascript.dataflow.internal.StepSummary
 
 pragma[noinline]
-private DataFlow::TypeTracker aux(
-  DataFlow::Node src, DataFlow::Node san, DataFlow::Node res, StepSummary summary
-) {
-  StepSummary::smallstep(reachableFromSourceSanitizerCandidatePair(src, san, result), res, summary)
+private DataFlow::TypeTracker aux(DataFlow::Node san, DataFlow::Node res, StepSummary summary) {
+  StepSummary::smallstep(reachableFromSanitizerCandidate(san, result), res, summary)
 }
 
 /**
@@ -193,8 +189,10 @@ private DataFlow::TypeTracker aux(
  * which are source, sanitiser, and sink candidate, respectively.
  */
 predicate triple(DataFlow::Node src, DataFlow::Node san, DataFlow::Node snk) {
-  isSinkCandidate(_, snk) and
-  snk = reachableFromSourceSanitizerCandidatePair(src, san, DataFlow::TypeTracker::end())
+  san = reachableFromSourceCandidate(src, DataFlow::TypeTracker::end()) and
+  src != san and
+  snk = reachableFromSanitizerCandidate(san, DataFlow::TypeTracker::end()) and
+  isSinkCandidate(_, snk)
 }
 
 from DataFlow::Node src, DataFlow::Node san, DataFlow::Node snk
