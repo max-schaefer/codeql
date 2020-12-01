@@ -379,6 +379,7 @@ module DOM {
   }
 
   /** Gets a data flow node that directly refers to a DOM `location` object. */
+  cached
   DataFlow::SourceNode locationSource() { result instanceof LocationSource::Range }
 
   /** Gets a reference to a DOM `location` object. */
@@ -423,6 +424,7 @@ module DOM {
   /**
    * Gets a reference to the 'document' object.
    */
+  cached
   DataFlow::SourceNode documentRef() {
     result = documentRef(DataFlow::TypeTracker::end())
     or

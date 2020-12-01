@@ -101,7 +101,10 @@ module CleartextLogging {
   /**
    * A data flow node that does not contain a clear-text password.
    */
-  abstract private class NonCleartextPassword extends DataFlow::Node { }
+  abstract private class NonCleartextPassword extends DataFlow::Node {
+    cached
+    NonCleartextPassword() { this = this }
+  }
 
   /**
    * An object with a property that may contain password information
