@@ -1,14 +1,40 @@
 import javascript
 import NodeRepresentation
 
-/** Holds if data read from a use of `f` may originate from an imported package. */
-predicate mayComeFromLibrary(API::Node f) {
+/**
+ * The name of an npm package that should be considered when building the propagation graph.
+ *
+ * To customize, implement concrete subclasses of this class.
+ *
+ * For example, to only consider `mongodb` you can use
+ *
+ * ```ql
+ * class MongoDbIsInteresting extends InterestingPackage {
+ *   MongoDbIsInteresting() { this = "mongodb" }
+ * }
+ * ```
+ *
+ * To consider all imports interesting, use
+ *
+ * ```ql
+ * class AllPackagesAreInteresting extends InterestingPackage {
+ *   AllPackagesAreInteresting() { exists(API::moduleImport(this)) }
+ * }
+ * ```
+ */
+abstract class InterestingPackage extends string {
+  bindingset[this]
+  InterestingPackage() { any() }
+}
+
+/** Holds if data read from a use of `f` may originate from package `pkg`. */
+predicate mayComeFromLibrary(API::Node f, string pkg) {
   // base case: import
-  f = API::moduleImport(_)
+  f = API::moduleImport(pkg)
   or
   // covariant recursive cases: members, instances, results, and promise contents
   // of something that comes from a library may themselves come from that library
-  exists(API::Node base | mayComeFromLibrary(base) |
+  exists(API::Node base | mayComeFromLibrary(base, pkg) |
     f = base.getAMember() or
     f = base.getInstance() or
     f = base.getReturn() or
@@ -17,16 +43,16 @@ predicate mayComeFromLibrary(API::Node f) {
   or
   // contravariant recursive case: parameters of something that escapes to a library
   // may come from that library
-  exists(API::Node base | mayEscapeToLibrary(base) | f = base.getAParameter())
+  exists(API::Node base | mayEscapeToLibrary(base, pkg) | f = base.getAParameter())
 }
 
 /**
- * Holds if data written to a definition of `f` may flow to an imported package.
+ * Holds if data written to a definition of `f` may flow to package `pkg`.
  */
-predicate mayEscapeToLibrary(API::Node f) {
+predicate mayEscapeToLibrary(API::Node f, string pkg) {
   // covariant recursive case: members, instances, results, and promise contents of something that
   // escapes to a library may themselves escape to that library
-  exists(API::Node base | mayEscapeToLibrary(base) |
+  exists(API::Node base | mayEscapeToLibrary(base, pkg) |
     f = base.getAMember() or
     f = base.getInstance() or
     f = base.getReturn() or
@@ -35,7 +61,7 @@ predicate mayEscapeToLibrary(API::Node f) {
   or
   // contravariant recursive case: arguments passed to a function
   // that comes from a library may escape to that library
-  exists(API::Node base | mayComeFromLibrary(base) | f = base.getAParameter())
+  exists(API::Node base | mayComeFromLibrary(base, pkg) | f = base.getAParameter())
 }
 
 /**
@@ -92,7 +118,7 @@ string rep(DataFlow::Node nd, boolean asRhs) {
  * Holds if `u` is a candidate for a taint source.
  */
 predicate isSourceCandidate(API::Node nd, DataFlow::Node u) {
-  mayComeFromLibrary(nd) and
+  mayComeFromLibrary(nd, any(InterestingPackage pkg)) and
   not nd = API::moduleImport(_) and
   u = nd.getAnImmediateUse() and
   exists(rep(u, false)) and
@@ -117,7 +143,7 @@ predicate isSanitizerCandidate(DataFlow::CallNode u) {
  * Holds if `d` is a candidate for a taint sink.
  */
 predicate isSinkCandidate(API::Node nd, DataFlow::Node d) {
-  mayEscapeToLibrary(nd) and
+  mayEscapeToLibrary(nd, any(InterestingPackage pkg)) and
   d = nd.getARhs() and
   not knownStep(d, _) and
   exists(rep(d, true)) and
