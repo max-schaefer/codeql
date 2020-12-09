@@ -128,6 +128,8 @@ predicate isSourceCandidate(API::Node nd, DataFlow::Node u) {
     not u = any(Import i).getImportedModuleNode()
     or
     u instanceof DataFlow::ParameterNode
+    or
+    u instanceof DataFlow::PropRead
   )
 }
 
