@@ -1,332 +1,194 @@
 import javascript
 import NodeRepresentation
 
-module PropagationGraph {
-  /**
-   * A taint step for purposes of the propagation graph.
-   *
-   * This includes both standard (local) taint steps and an additional step from
-   * a tainted property to the enclosing object. This step is not included among
-   * the standard taint steps since it would lead to false flow in combination with
-   * the converse step from tainted objects to their properties. For propagation graphs,
-   * on the other hand, we are less worried about false positives than about false
-   * negatives, so we include both steps.
-   */
-  private predicate taintStep(DataFlow::Node pred, DataFlow::Node succ) {
-    TaintTracking::localTaintStep(pred, succ)
+/** Holds if data read from a use of `f` may originate from an imported package. */
+predicate mayComeFromLibrary(API::Node f) {
+  // base case: import
+  f = API::moduleImport(_)
+  or
+  // covariant recursive cases: members, instances, results, and promise contents
+  // of something that comes from a library may themselves come from that library
+  exists(API::Node base | mayComeFromLibrary(base) |
+    f = base.getAMember() or
+    f = base.getInstance() or
+    f = base.getReturn() or
+    f = base.getPromised()
+  )
+  or
+  // contravariant recursive case: parameters of something that escapes to a library
+  // may come from that library
+  exists(API::Node base | mayEscapeToLibrary(base) | f = base.getAParameter())
+}
+
+/**
+ * Holds if data written to a definition of `f` may flow to an imported package.
+ */
+predicate mayEscapeToLibrary(API::Node f) {
+  // covariant recursive case: members, instances, results, and promise contents of something that
+  // escapes to a library may themselves escape to that library
+  exists(API::Node base | mayEscapeToLibrary(base) |
+    f = base.getAMember() or
+    f = base.getInstance() or
+    f = base.getReturn() or
+    f = base.getPromised()
+  )
+  or
+  // contravariant recursive case: arguments passed to a function
+  // that comes from a library may escape to that library
+  exists(API::Node base | mayComeFromLibrary(base) | f = base.getAParameter())
+}
+
+/**
+ * Holds if `pred` is a call of the form `f(..., x, ...)` and `succ` is a subsequent
+ * use of `x` where the result of the call is either known to be true or known to be
+ * false.
+ */
+private predicate guard(DataFlow::CallNode pred, DataFlow::Node succ) {
+  exists(ConditionGuardNode g, SsaVariable v |
+    g.getTest() = pred.asExpr() and
+    pred.getAnArgument().asExpr() = v.getAUse() and
+    succ.asExpr() = v.getAUse() and
+    g.dominates(succ.getBasicBlock())
+  )
+}
+
+/**
+ * Holds if `pred` -> `succ` is a known flow step for which we have a model.
+ */
+predicate knownStep(DataFlow::Node pred, DataFlow::Node succ) {
+  // exclude known flow/taint step
+  any(TaintTracking::AdditionalTaintStep s).step(pred, succ)
+  or
+  exists(DataFlow::AdditionalFlowStep s |
+    s.step(pred, succ) or
+    s.step(pred, succ, _, _) or
+    s.loadStep(pred, succ, _) or
+    s.storeStep(pred, succ, _) or
+    s.loadStoreStep(pred, succ, _)
+  )
+}
+
+/**
+ * Gets a candidate representation for `nd`, filtering out very general representations.
+ */
+string candidateRep(DataFlow::Node nd, boolean asRhs) {
+  result = candidateRep(nd, _, asRhs) and
+  // exclude some overly general representations like `(member data *)` or
+  // `(parameter 0 (member exports *))`
+  not result.regexpMatch("\\((parameter|member) \\w+ (\\*|\\(member exports \\*\\))\\)") and
+  not result.regexpMatch("\\(root .*\\)")
+}
+
+/**
+ * Gets a representation for `nd` that is not extremely rare, that is, it occurs at least five
+ * times.
+ */
+string rep(DataFlow::Node nd, boolean asRhs) {
+  result = candidateRep(nd, asRhs) and
+  count(DataFlow::Node nd2 | result = candidateRep(nd2, asRhs)) >= 5
+}
+
+/**
+ * Holds if `u` is a candidate for a taint source.
+ */
+predicate isSourceCandidate(API::Node nd, DataFlow::Node u) {
+  mayComeFromLibrary(nd) and
+  not nd = API::moduleImport(_) and
+  u = nd.getAnImmediateUse() and
+  exists(rep(u, false)) and
+  not knownStep(_, u) and
+  (
+    u instanceof DataFlow::CallNode and
+    not u = any(Import i).getImportedModuleNode()
     or
-    succ.(DataFlow::SourceNode).hasPropertyWrite(_, pred)
-  }
+    u instanceof DataFlow::ParameterNode
+  )
+}
 
-  private newtype TNode =
-    MkNode(DataFlow::Node nd) {
-      (
-        nd instanceof DataFlow::InvokeNode and
-        (
-          taintStep(nd, _)
-          or
-          guard(nd, _)
-        )
-        or
-        nd instanceof DataFlow::PropRead
-        or
-        nd instanceof DataFlow::ParameterNode and
-        taintStep(nd, _)
-        or
-        exists(DataFlow::InvokeNode invk | not calls(invk, _) |
-          nd = invk.getAnArgument()
-          or
-          nd = invk.(DataFlow::MethodCallNode).getReceiver()
-        ) and
-        (taintStep(_, nd) or nd instanceof DataFlow::PropRead)
-      ) and
-      isRelevant(nd)
-    }
+/**
+ * Holds if `u` is a candidate for a sanitiser.
+ */
+predicate isSanitizerCandidate(DataFlow::CallNode u) {
+  exists(rep(u, false)) and
+  not u = any(Import i).getImportedModuleNode()
+}
 
-  /**
-   * Holds if `pred` is a call of the form `f(..., x, ...)` and `succ` is a subsequent
-   * use of `x` where the result of the call is either known to be true or known to be
-   * false.
-   */
-  private predicate guard(DataFlow::CallNode pred, DataFlow::Node succ) {
-    exists(ConditionGuardNode g, SsaVariable v |
-      g.getTest() = pred.asExpr() and
-      pred.getAnArgument().asExpr() = v.getAUse() and
-      succ.asExpr() = v.getAUse() and
-      exists(MkNode(succ)) and
-      g.dominates(succ.getBasicBlock())
-    )
-  }
-
-  /**
-   * A propagation-graph node, or "event" in Merlin terminology (cf Section 5.1 of
-   * Seldon paper).
-   */
-  class Node extends TNode {
-    DataFlow::Node nd;
-
-    Node() { this = MkNode(nd) }
-
-    string candidateRep(boolean asRhs) { result = candidateRep(nd, _, asRhs) }
-
-    /**
-     * Gets an abstract representation of this node, corresponding to the REP function
-     * in the Seldon paper.
-     *
-     * If `asRhs` is true, then this node is represented as the right-hand side of a definition,
-     * otherwise as a use.
-     *
-     * For example, the call `foo()` in `bar(foo())` can be represented either as the first argument
-     * to function `bar`, or as the result of function `foo`. If `asRhs` is true, this predicate
-     * chooses the former representation, if it is false the latter.
-     */
-    string rep(boolean asRhs) {
-      result = candidateRep(asRhs) and
-      // eliminate rare representations
-      count(Node n | n.candidateRep(_) = result) >= 5
-    }
-
-    /**
-     * Gets an abstract representation of this node, filtering out generic representations that
-     * are uninteresting for inferring sources and sinks.
-     *
-     * See `rep` for an explanation of the `asRhs` parameter.
-     */
-    string preciseRep(boolean asRhs) {
-      result = rep(asRhs) and
-      not result.matches(genericMemberPattern())
-    }
-
-    /**
-     * Holds if there is no candidate representation for this node.
-     *
-     * This can happen, for instance, for dynamic property reads where we
-     * cannot tell the name of the property being accessed.
-     */
-    predicate unrepresentable() { not exists(candidateRep(_)) }
-
-    predicate hasLocationInfo(
-      string filepath, int startline, int startcolumn, int endline, int endcolumn
-    ) {
-      nd.hasLocationInfo(filepath, startline, startcolumn, endline, endcolumn)
-    }
-
-    string getKind() {
-      if nd = DataFlow::reflectiveCallNode(_)
-      then result = "reflective call"
-      else
-        if nd instanceof DataFlow::InvokeNode
-        then result = "explicit call"
-        else
-          if nd instanceof DataFlow::PropRead
-          then result = "read"
-          else
-            if nd instanceof DataFlow::ParameterNode
-            then result = "param"
-            else result = "other"
-    }
-
-    /** Gets a unique ID for this propagation-graph node, consisting of its URL and its kind. */
-    string getId() {
-      exists(string filepath, int startline, int startcolumn, int endline, int endcolumn |
-        hasLocationInfo(filepath, startline, startcolumn, endline, endcolumn) and
-        result =
-          filepath + ":" + startline + ":" + startcolumn + ":" + endline + ":" + endcolumn + ";" +
-            getKind()
-      )
-    }
-
-    string toString() { result = nd.toString() }
-
-    predicate flowsTo(DataFlow::Node sink) {
-      nd = sink
-      or
-      nd instanceof DataFlow::SourceNode and
-      taintStep*(nd, sink)
-    }
-
-    DataFlow::Node asDataFlowNode() { result = nd }
-  }
-
-  class SourceCandidate extends Node {
-    SourceCandidate() {
-      exists(candidateRep(false)) and
-      (
-        nd instanceof DataFlow::InvokeNode or
-        nd instanceof DataFlow::PropRead or
-        nd instanceof DataFlow::ParameterNode
-      )
-    }
-
-    string rep() { result = rep(false) }
-
-    string preciseRep() { result = preciseRep(false) }
-  }
-
-  class SanitizerCandidate extends Node {
-    SanitizerCandidate() { exists(candidateRep(false)) and nd instanceof DataFlow::InvokeNode }
-
-    string rep() { result = rep(false) }
-
-    string preciseRep() { result = preciseRep(false) }
-  }
-
-  class SinkCandidate extends Node {
-    SinkCandidate() {
-      exists(candidateRep(true)) and
-      (
-        exists(DataFlow::InvokeNode invk |
-          nd = invk.getAnArgument()
-          or
-          nd = invk.(DataFlow::MethodCallNode).getReceiver()
-        )
-        or
-        nd = any(DataFlow::PropWrite pw).getRhs()
-      )
-    }
-
-    string rep() { result = rep(true) }
-
-    string preciseRep() { result = preciseRep(true) }
-  }
-
-  private string genericMemberPattern() {
-    exists(ExternalType tp |
-      tp.getName() in ["Array", "Function", "Object", "Promise", "String"] and
-      result = "%(member " + tp.getAMember().getName() + " *)%"
-    )
-  }
-
-  /**
-   * Holds if there is an edge between `pred` and `succ` in the propagation graph
-   * (cf Section 5.2 of Seldon paper).
-   */
-  predicate edge(Node pred, Node succ) {
-    exists(DataFlow::CallNode c | not calls(c, _) and c = succ.asDataFlowNode() |
-      pred.flowsTo(c.getAnArgument())
-      or
-      pred.flowsTo(c.getReceiver())
-    )
+/**
+ * Holds if `d` is a candidate for a taint sink.
+ */
+predicate isSinkCandidate(API::Node nd, DataFlow::Node d) {
+  mayEscapeToLibrary(nd) and
+  d = nd.getARhs() and
+  not knownStep(d, _) and
+  exists(rep(d, true)) and
+  (
+    d = any(ReturnStmt ret).getExpr().flow()
     or
-    pred.flowsTo(succ.asDataFlowNode()) and
-    pred != succ
-    or
-    pointsTo(_, pred.asDataFlowNode()) = pointsTo(_, succ.asDataFlowNode()) and
-    pred != succ
-    or
-    // edge capturing indirect flow; for example, in the code snippet
-    // `if(path.isAbsolute(p)) use(p)` this adds an edge between the call to `isAbsolute`
-    // and the argument `p` to `use`
-    guard(pred.asDataFlowNode(), succ.asDataFlowNode())
-  }
-
-  pragma[noinline]
-  private predicate callInFile(DataFlow::CallNode call, DataFlow::FunctionNode callee, File f) {
-    call.getFile() = f and
-    callee.getFunction() = call.getACallee(_)
-  }
-
-  /**
-   * Holds if `call` calls `callee` within the same file.
-   *
-   * As explained in Section 5.2 of the Seldon paper, calles outside the same file are
-   * not considered.
-   */
-  private predicate calls(DataFlow::CallNode call, DataFlow::FunctionNode callee) {
-    callInFile(call, callee, callee.getFile())
-  }
-
-  /**
-   * An allocation site as tracked by the points-to analysis, that is,
-   * an unresolvable call, or a parameter to a callback function passed as an argument
-   * to an unresolvable function
-   */
-  private class AllocationSite extends DataFlow::Node {
-    AllocationSite() {
-      getBasicBlock() instanceof ReachableBasicBlock and
-      exists(DataFlow::InvokeNode invk | not calls(invk, _) |
-        this = invk
-        or
-        this = invk.getABoundCallbackParameter(_, _)
-      )
-    }
-  }
-
-  /** A (1-CFA) context. */
-  private newtype Context =
-    Top() or
-    Call(DataFlow::CallNode c) { not c instanceof AllocationSite }
-
-  /** Gets the context resulting from adding call site `c` to context `base`. */
-  private Context push(DataFlow::CallNode c, Context base) {
-    base = any(Context ctxt) and
-    result = Call(c)
-  }
-
-  /** Holds if `nd` should be analyzed in context `ctxt`. */
-  private predicate viableContext(Context ctxt, DataFlow::Node nd) {
-    ctxt = Top() and
-    nd.getBasicBlock() instanceof ReachableBasicBlock
-    or
-    exists(DataFlow::CallNode c, DataFlow::FunctionNode fn |
-      calls(c, fn) and
-      fn.getFunction() = nd.getContainer() and
-      nd.getBasicBlock() instanceof ReachableBasicBlock and
-      ctxt = Call(c)
+    exists(DataFlow::InvokeNode invk |
+      d = invk.(DataFlow::MethodCallNode).getReceiver() or
+      d = invk.getAnArgument()
     )
-  }
+  )
+}
 
-  private predicate argumentPassing(DataFlow::CallNode call, DataFlow::Node arg, DataFlow::Node parm) {
-    exists(DataFlow::FunctionNode callee | calls(call, callee) |
-      exists(int i |
-        arg = call.getArgument(i) and
-        parm = callee.getParameter(i)
-      )
-      or
-      arg = call.getReceiver() and
-      parm = callee.getReceiver()
-    )
-  }
+/**
+ * Holds if step `pred` -> `succ` should be considered for the propagation graph.
+ */
+predicate step(DataFlow::Node pred, DataFlow::Node succ) {
+  TaintTracking::localTaintStep(pred, succ)
+  or
+  succ.(DataFlow::SourceNode).hasPropertyWrite(_, pred)
+  or
+  succ.(DataFlow::CallNode).getAnArgument() = pred
+  or
+  guard(pred, succ)
+}
 
-  /** Gets the allocation sites `nd` may refer to in context `ctxt`. */
-  private AllocationSite pointsTo(Context ctxt, DataFlow::Node nd) {
-    viableContext(ctxt, nd) and
-    result = nd
-    or
-    result = pointsTo(ctxt, nd.getAPredecessor())
-    or
-    exists(DataFlow::PropRead pr | nd = pr |
-      result = fieldPointsTo(pointsTo(ctxt, pr.getBase()), pr.getPropertyName())
-    )
-    or
-    // flow from the `i`th argument of a call to the corresponding parameter
-    exists(DataFlow::CallNode call, DataFlow::Node arg, Context base |
-      argumentPassing(call, arg, nd) and
-      ctxt = push(call, base) and
-      result = pointsTo(base, arg)
-    )
-    or
-    // flow from a returned value to a call to the function
-    exists(DataFlow::FunctionNode callee |
-      calls(nd, callee) and
-      viableContext(ctxt, nd) and
-      result = pointsTo(push(nd, ctxt), callee.getAReturn())
-    )
-  }
+/**
+ * Gets a node that is reachable from a source candidate in the propagation graph.
+ */
+DataFlow::Node reachableFromSourceCandidate(DataFlow::Node src, DataFlow::TypeTracker t) {
+  isSourceCandidate(_, result) and
+  src = result and
+  t.start()
+  or
+  step(reachableFromSourceCandidate(src, t), result)
+  or
+  exists(DataFlow::TypeTracker t2 | t = t2.smallstep(reachableFromSourceCandidate(src, t2), result))
+}
 
-  /** Gets an allocation site field `f` of allocation site `a` may point to. */
-  private AllocationSite fieldPointsTo(AllocationSite a, string f) {
-    exists(DataFlow::PropWrite pw, Context ctxt |
-      fieldWriteBasePointsTo(ctxt, pw, f, a) and
-      result = pointsTo(ctxt, pw.getRhs())
-    )
-  }
+/**
+ * Gets a node that is reachable from a source candidate through a sanitiser candidate
+ * in the propagation graph.
+ */
+DataFlow::Node reachableFromSanitizerCandidate(DataFlow::Node san, DataFlow::TypeTracker t) {
+  isSanitizerCandidate(san) and
+  exists(DataFlow::Node src |
+    san = reachableFromSourceCandidate(src, DataFlow::TypeTracker::end()) and
+    src != san
+  ) and
+  result = san and
+  t.start()
+  or
+  step(reachableFromSanitizerCandidate(san, t), result)
+  or
+  exists(StepSummary summary | t = aux(san, result, summary).append(summary))
+}
 
-  /** Holds if `pw` is a property write to field `f` and its base may point to `a`. */
-  private predicate fieldWriteBasePointsTo(
-    Context ctxt, DataFlow::PropWrite pw, string f, AllocationSite a
-  ) {
-    a = pointsTo(ctxt, pw.getBase()) and
-    f = pw.getPropertyName()
-  }
+private import semmle.javascript.dataflow.internal.StepSummary
+
+pragma[noinline]
+private DataFlow::TypeTracker aux(DataFlow::Node san, DataFlow::Node res, StepSummary summary) {
+  StepSummary::smallstep(reachableFromSanitizerCandidate(san, result), res, summary)
+}
+
+/**
+ * Holds if there is a path from `src` through `san` to `snk` in the propagation graph,
+ * which are source, sanitiser, and sink candidate, respectively.
+ */
+predicate triple(DataFlow::Node src, DataFlow::Node san, DataFlow::Node snk) {
+  san = reachableFromSourceCandidate(src, DataFlow::TypeTracker::end()) and
+  src != san and
+  snk = reachableFromSanitizerCandidate(san, DataFlow::TypeTracker::end()) and
+  isSinkCandidate(_, snk)
 }
