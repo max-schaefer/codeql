@@ -77,20 +77,24 @@ string candidateRep(DataFlow::Node nd, int depth, boolean asRhs) {
       baserep = "*" and
       depth = 1 and
       // avoid creating trivial representations like `(return *)`
-      step.regexpMatch("(member|parameter) [^\\d].*") and
+      step.regexpMatch("(member|parameter) [^\\d*].*") and
       isRelevant(nd)
     ) and
     result = "(" + step + " " + baserep + ")"
   |
     // members
-    exists(string prop |
-      nd = base.getAPropertyRead(prop) and
+    exists(DataFlow::PropRef prop |
+      prop = base.getAPropertyRead() and
+      nd = prop and
       asRhs = false
       or
-      nd = base.getAPropertyWrite(prop).getRhs().getALocalSource() and
+      prop = base.getAPropertyWrite() and
+      nd = prop.(DataFlow::PropWrite).getRhs().getALocalSource() and
       asRhs = true
     |
-      step = "member " + prop
+      step = "member " + prop.getPropertyName()
+      or
+      step = "member *"
     )
     or
     // instances
