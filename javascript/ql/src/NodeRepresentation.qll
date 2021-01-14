@@ -41,6 +41,15 @@ private DataFlow::Node getAnExport(string pkgName, string prop) {
   )
 }
 
+private DataFlow::Node rhs(DataFlow::PropWrite pw) {
+  exists(DataFlow::Node rhs | rhs = pw.getRhs() |
+    result = rhs.getALocalSource()
+    or
+    not exists(rhs.getAPredecessor()) and
+    result = rhs
+  )
+}
+
 /**
  * Gets a candidate representation of `nd` as a (suffix of an) access path.
  */
@@ -89,7 +98,7 @@ string candidateRep(DataFlow::Node nd, int depth, boolean asRhs) {
       asRhs = false
       or
       prop = base.getAPropertyWrite() and
-      nd = prop.(DataFlow::PropWrite).getRhs().getALocalSource() and
+      nd = rhs(prop) and
       asRhs = true
     |
       step = "member " + prop.getPropertyName()
