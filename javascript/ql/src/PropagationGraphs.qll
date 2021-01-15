@@ -156,6 +156,8 @@ predicate isSinkCandidate(API::Node nd, DataFlow::Node d) {
       d = invk.(DataFlow::MethodCallNode).getReceiver() or
       d = invk.getAnArgument()
     )
+    or
+    d = any(DataFlow::PropWrite pw).getRhs()
   )
 }
 

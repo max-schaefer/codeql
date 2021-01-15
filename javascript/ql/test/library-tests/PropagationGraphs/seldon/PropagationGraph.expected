@@ -160,30 +160,102 @@
 | (parameter req (parameter 1 (member post *))) | (return (root https://www.npmjs.com/package/sanitize-path)) | (parameter 0 (member * (root https://www.npmjs.com/package/fs))) |
 | (parameter req (parameter 1 (member post *))) | (return (root https://www.npmjs.com/package/sanitize-path)) | (parameter 0 (member writeFile (root https://www.npmjs.com/package/fs))) |
 | (parameter req (parameter 1 (member post *))) | (return (root https://www.npmjs.com/package/sanitize-path)) | (parameter 0 (member writeFile *)) |
+| (return (member * (root https://www.npmjs.com/package/lib))) | (return (member * (root https://www.npmjs.com/package/lib))) | (member * (parameter 0 (member * (root https://www.npmjs.com/package/lib)))) |
+| (return (member * (root https://www.npmjs.com/package/lib))) | (return (member * (root https://www.npmjs.com/package/lib))) | (member * (parameter 0 (member sink2 (root https://www.npmjs.com/package/lib)))) |
+| (return (member * (root https://www.npmjs.com/package/lib))) | (return (member * (root https://www.npmjs.com/package/lib))) | (member * (parameter 0 (member sink2 *))) |
+| (return (member * (root https://www.npmjs.com/package/lib))) | (return (member * (root https://www.npmjs.com/package/lib))) | (member prop (parameter 0 (member * (root https://www.npmjs.com/package/lib)))) |
+| (return (member * (root https://www.npmjs.com/package/lib))) | (return (member * (root https://www.npmjs.com/package/lib))) | (member prop (parameter 0 (member sink2 (root https://www.npmjs.com/package/lib)))) |
+| (return (member * (root https://www.npmjs.com/package/lib))) | (return (member * (root https://www.npmjs.com/package/lib))) | (member prop (parameter 0 (member sink2 *))) |
 | (return (member * (root https://www.npmjs.com/package/lib))) | (return (member * (root https://www.npmjs.com/package/lib))) | (parameter 0 (member * (root https://www.npmjs.com/package/lib))) |
+| (return (member * (root https://www.npmjs.com/package/lib))) | (return (member * (root https://www.npmjs.com/package/lib))) | (parameter 0 (member sink2 (root https://www.npmjs.com/package/lib))) |
+| (return (member * (root https://www.npmjs.com/package/lib))) | (return (member * (root https://www.npmjs.com/package/lib))) | (parameter 0 (member sink2 *)) |
 | (return (member * (root https://www.npmjs.com/package/lib))) | (return (member * (root https://www.npmjs.com/package/lib))) | (parameter 0 (member sink (root https://www.npmjs.com/package/lib))) |
 | (return (member * (root https://www.npmjs.com/package/lib))) | (return (member * (root https://www.npmjs.com/package/lib))) | (parameter 0 (member sink *)) |
+| (return (member * (root https://www.npmjs.com/package/lib))) | (return (member sanitize (root https://www.npmjs.com/package/lib))) | (member * (parameter 0 (member * (root https://www.npmjs.com/package/lib)))) |
+| (return (member * (root https://www.npmjs.com/package/lib))) | (return (member sanitize (root https://www.npmjs.com/package/lib))) | (member * (parameter 0 (member sink2 (root https://www.npmjs.com/package/lib)))) |
+| (return (member * (root https://www.npmjs.com/package/lib))) | (return (member sanitize (root https://www.npmjs.com/package/lib))) | (member * (parameter 0 (member sink2 *))) |
+| (return (member * (root https://www.npmjs.com/package/lib))) | (return (member sanitize (root https://www.npmjs.com/package/lib))) | (member prop (parameter 0 (member * (root https://www.npmjs.com/package/lib)))) |
+| (return (member * (root https://www.npmjs.com/package/lib))) | (return (member sanitize (root https://www.npmjs.com/package/lib))) | (member prop (parameter 0 (member sink2 (root https://www.npmjs.com/package/lib)))) |
+| (return (member * (root https://www.npmjs.com/package/lib))) | (return (member sanitize (root https://www.npmjs.com/package/lib))) | (member prop (parameter 0 (member sink2 *))) |
 | (return (member * (root https://www.npmjs.com/package/lib))) | (return (member sanitize (root https://www.npmjs.com/package/lib))) | (parameter 0 (member * (root https://www.npmjs.com/package/lib))) |
+| (return (member * (root https://www.npmjs.com/package/lib))) | (return (member sanitize (root https://www.npmjs.com/package/lib))) | (parameter 0 (member sink2 (root https://www.npmjs.com/package/lib))) |
+| (return (member * (root https://www.npmjs.com/package/lib))) | (return (member sanitize (root https://www.npmjs.com/package/lib))) | (parameter 0 (member sink2 *)) |
 | (return (member * (root https://www.npmjs.com/package/lib))) | (return (member sanitize (root https://www.npmjs.com/package/lib))) | (parameter 0 (member sink (root https://www.npmjs.com/package/lib))) |
 | (return (member * (root https://www.npmjs.com/package/lib))) | (return (member sanitize (root https://www.npmjs.com/package/lib))) | (parameter 0 (member sink *)) |
+| (return (member * (root https://www.npmjs.com/package/lib))) | (return (member sanitize *)) | (member * (parameter 0 (member * (root https://www.npmjs.com/package/lib)))) |
+| (return (member * (root https://www.npmjs.com/package/lib))) | (return (member sanitize *)) | (member * (parameter 0 (member sink2 (root https://www.npmjs.com/package/lib)))) |
+| (return (member * (root https://www.npmjs.com/package/lib))) | (return (member sanitize *)) | (member * (parameter 0 (member sink2 *))) |
+| (return (member * (root https://www.npmjs.com/package/lib))) | (return (member sanitize *)) | (member prop (parameter 0 (member * (root https://www.npmjs.com/package/lib)))) |
+| (return (member * (root https://www.npmjs.com/package/lib))) | (return (member sanitize *)) | (member prop (parameter 0 (member sink2 (root https://www.npmjs.com/package/lib)))) |
+| (return (member * (root https://www.npmjs.com/package/lib))) | (return (member sanitize *)) | (member prop (parameter 0 (member sink2 *))) |
 | (return (member * (root https://www.npmjs.com/package/lib))) | (return (member sanitize *)) | (parameter 0 (member * (root https://www.npmjs.com/package/lib))) |
+| (return (member * (root https://www.npmjs.com/package/lib))) | (return (member sanitize *)) | (parameter 0 (member sink2 (root https://www.npmjs.com/package/lib))) |
+| (return (member * (root https://www.npmjs.com/package/lib))) | (return (member sanitize *)) | (parameter 0 (member sink2 *)) |
 | (return (member * (root https://www.npmjs.com/package/lib))) | (return (member sanitize *)) | (parameter 0 (member sink (root https://www.npmjs.com/package/lib))) |
 | (return (member * (root https://www.npmjs.com/package/lib))) | (return (member sanitize *)) | (parameter 0 (member sink *)) |
+| (return (member source (root https://www.npmjs.com/package/lib))) | (return (member * (root https://www.npmjs.com/package/lib))) | (member * (parameter 0 (member * (root https://www.npmjs.com/package/lib)))) |
+| (return (member source (root https://www.npmjs.com/package/lib))) | (return (member * (root https://www.npmjs.com/package/lib))) | (member * (parameter 0 (member sink2 (root https://www.npmjs.com/package/lib)))) |
+| (return (member source (root https://www.npmjs.com/package/lib))) | (return (member * (root https://www.npmjs.com/package/lib))) | (member * (parameter 0 (member sink2 *))) |
+| (return (member source (root https://www.npmjs.com/package/lib))) | (return (member * (root https://www.npmjs.com/package/lib))) | (member prop (parameter 0 (member * (root https://www.npmjs.com/package/lib)))) |
+| (return (member source (root https://www.npmjs.com/package/lib))) | (return (member * (root https://www.npmjs.com/package/lib))) | (member prop (parameter 0 (member sink2 (root https://www.npmjs.com/package/lib)))) |
+| (return (member source (root https://www.npmjs.com/package/lib))) | (return (member * (root https://www.npmjs.com/package/lib))) | (member prop (parameter 0 (member sink2 *))) |
 | (return (member source (root https://www.npmjs.com/package/lib))) | (return (member * (root https://www.npmjs.com/package/lib))) | (parameter 0 (member * (root https://www.npmjs.com/package/lib))) |
+| (return (member source (root https://www.npmjs.com/package/lib))) | (return (member * (root https://www.npmjs.com/package/lib))) | (parameter 0 (member sink2 (root https://www.npmjs.com/package/lib))) |
+| (return (member source (root https://www.npmjs.com/package/lib))) | (return (member * (root https://www.npmjs.com/package/lib))) | (parameter 0 (member sink2 *)) |
 | (return (member source (root https://www.npmjs.com/package/lib))) | (return (member * (root https://www.npmjs.com/package/lib))) | (parameter 0 (member sink (root https://www.npmjs.com/package/lib))) |
 | (return (member source (root https://www.npmjs.com/package/lib))) | (return (member * (root https://www.npmjs.com/package/lib))) | (parameter 0 (member sink *)) |
+| (return (member source (root https://www.npmjs.com/package/lib))) | (return (member sanitize (root https://www.npmjs.com/package/lib))) | (member * (parameter 0 (member * (root https://www.npmjs.com/package/lib)))) |
+| (return (member source (root https://www.npmjs.com/package/lib))) | (return (member sanitize (root https://www.npmjs.com/package/lib))) | (member * (parameter 0 (member sink2 (root https://www.npmjs.com/package/lib)))) |
+| (return (member source (root https://www.npmjs.com/package/lib))) | (return (member sanitize (root https://www.npmjs.com/package/lib))) | (member * (parameter 0 (member sink2 *))) |
+| (return (member source (root https://www.npmjs.com/package/lib))) | (return (member sanitize (root https://www.npmjs.com/package/lib))) | (member prop (parameter 0 (member * (root https://www.npmjs.com/package/lib)))) |
+| (return (member source (root https://www.npmjs.com/package/lib))) | (return (member sanitize (root https://www.npmjs.com/package/lib))) | (member prop (parameter 0 (member sink2 (root https://www.npmjs.com/package/lib)))) |
+| (return (member source (root https://www.npmjs.com/package/lib))) | (return (member sanitize (root https://www.npmjs.com/package/lib))) | (member prop (parameter 0 (member sink2 *))) |
 | (return (member source (root https://www.npmjs.com/package/lib))) | (return (member sanitize (root https://www.npmjs.com/package/lib))) | (parameter 0 (member * (root https://www.npmjs.com/package/lib))) |
+| (return (member source (root https://www.npmjs.com/package/lib))) | (return (member sanitize (root https://www.npmjs.com/package/lib))) | (parameter 0 (member sink2 (root https://www.npmjs.com/package/lib))) |
+| (return (member source (root https://www.npmjs.com/package/lib))) | (return (member sanitize (root https://www.npmjs.com/package/lib))) | (parameter 0 (member sink2 *)) |
 | (return (member source (root https://www.npmjs.com/package/lib))) | (return (member sanitize (root https://www.npmjs.com/package/lib))) | (parameter 0 (member sink (root https://www.npmjs.com/package/lib))) |
 | (return (member source (root https://www.npmjs.com/package/lib))) | (return (member sanitize (root https://www.npmjs.com/package/lib))) | (parameter 0 (member sink *)) |
+| (return (member source (root https://www.npmjs.com/package/lib))) | (return (member sanitize *)) | (member * (parameter 0 (member * (root https://www.npmjs.com/package/lib)))) |
+| (return (member source (root https://www.npmjs.com/package/lib))) | (return (member sanitize *)) | (member * (parameter 0 (member sink2 (root https://www.npmjs.com/package/lib)))) |
+| (return (member source (root https://www.npmjs.com/package/lib))) | (return (member sanitize *)) | (member * (parameter 0 (member sink2 *))) |
+| (return (member source (root https://www.npmjs.com/package/lib))) | (return (member sanitize *)) | (member prop (parameter 0 (member * (root https://www.npmjs.com/package/lib)))) |
+| (return (member source (root https://www.npmjs.com/package/lib))) | (return (member sanitize *)) | (member prop (parameter 0 (member sink2 (root https://www.npmjs.com/package/lib)))) |
+| (return (member source (root https://www.npmjs.com/package/lib))) | (return (member sanitize *)) | (member prop (parameter 0 (member sink2 *))) |
 | (return (member source (root https://www.npmjs.com/package/lib))) | (return (member sanitize *)) | (parameter 0 (member * (root https://www.npmjs.com/package/lib))) |
+| (return (member source (root https://www.npmjs.com/package/lib))) | (return (member sanitize *)) | (parameter 0 (member sink2 (root https://www.npmjs.com/package/lib))) |
+| (return (member source (root https://www.npmjs.com/package/lib))) | (return (member sanitize *)) | (parameter 0 (member sink2 *)) |
 | (return (member source (root https://www.npmjs.com/package/lib))) | (return (member sanitize *)) | (parameter 0 (member sink (root https://www.npmjs.com/package/lib))) |
 | (return (member source (root https://www.npmjs.com/package/lib))) | (return (member sanitize *)) | (parameter 0 (member sink *)) |
+| (return (member source *)) | (return (member * (root https://www.npmjs.com/package/lib))) | (member * (parameter 0 (member * (root https://www.npmjs.com/package/lib)))) |
+| (return (member source *)) | (return (member * (root https://www.npmjs.com/package/lib))) | (member * (parameter 0 (member sink2 (root https://www.npmjs.com/package/lib)))) |
+| (return (member source *)) | (return (member * (root https://www.npmjs.com/package/lib))) | (member * (parameter 0 (member sink2 *))) |
+| (return (member source *)) | (return (member * (root https://www.npmjs.com/package/lib))) | (member prop (parameter 0 (member * (root https://www.npmjs.com/package/lib)))) |
+| (return (member source *)) | (return (member * (root https://www.npmjs.com/package/lib))) | (member prop (parameter 0 (member sink2 (root https://www.npmjs.com/package/lib)))) |
+| (return (member source *)) | (return (member * (root https://www.npmjs.com/package/lib))) | (member prop (parameter 0 (member sink2 *))) |
 | (return (member source *)) | (return (member * (root https://www.npmjs.com/package/lib))) | (parameter 0 (member * (root https://www.npmjs.com/package/lib))) |
+| (return (member source *)) | (return (member * (root https://www.npmjs.com/package/lib))) | (parameter 0 (member sink2 (root https://www.npmjs.com/package/lib))) |
+| (return (member source *)) | (return (member * (root https://www.npmjs.com/package/lib))) | (parameter 0 (member sink2 *)) |
 | (return (member source *)) | (return (member * (root https://www.npmjs.com/package/lib))) | (parameter 0 (member sink (root https://www.npmjs.com/package/lib))) |
 | (return (member source *)) | (return (member * (root https://www.npmjs.com/package/lib))) | (parameter 0 (member sink *)) |
+| (return (member source *)) | (return (member sanitize (root https://www.npmjs.com/package/lib))) | (member * (parameter 0 (member * (root https://www.npmjs.com/package/lib)))) |
+| (return (member source *)) | (return (member sanitize (root https://www.npmjs.com/package/lib))) | (member * (parameter 0 (member sink2 (root https://www.npmjs.com/package/lib)))) |
+| (return (member source *)) | (return (member sanitize (root https://www.npmjs.com/package/lib))) | (member * (parameter 0 (member sink2 *))) |
+| (return (member source *)) | (return (member sanitize (root https://www.npmjs.com/package/lib))) | (member prop (parameter 0 (member * (root https://www.npmjs.com/package/lib)))) |
+| (return (member source *)) | (return (member sanitize (root https://www.npmjs.com/package/lib))) | (member prop (parameter 0 (member sink2 (root https://www.npmjs.com/package/lib)))) |
+| (return (member source *)) | (return (member sanitize (root https://www.npmjs.com/package/lib))) | (member prop (parameter 0 (member sink2 *))) |
 | (return (member source *)) | (return (member sanitize (root https://www.npmjs.com/package/lib))) | (parameter 0 (member * (root https://www.npmjs.com/package/lib))) |
+| (return (member source *)) | (return (member sanitize (root https://www.npmjs.com/package/lib))) | (parameter 0 (member sink2 (root https://www.npmjs.com/package/lib))) |
+| (return (member source *)) | (return (member sanitize (root https://www.npmjs.com/package/lib))) | (parameter 0 (member sink2 *)) |
 | (return (member source *)) | (return (member sanitize (root https://www.npmjs.com/package/lib))) | (parameter 0 (member sink (root https://www.npmjs.com/package/lib))) |
 | (return (member source *)) | (return (member sanitize (root https://www.npmjs.com/package/lib))) | (parameter 0 (member sink *)) |
+| (return (member source *)) | (return (member sanitize *)) | (member * (parameter 0 (member * (root https://www.npmjs.com/package/lib)))) |
+| (return (member source *)) | (return (member sanitize *)) | (member * (parameter 0 (member sink2 (root https://www.npmjs.com/package/lib)))) |
+| (return (member source *)) | (return (member sanitize *)) | (member * (parameter 0 (member sink2 *))) |
+| (return (member source *)) | (return (member sanitize *)) | (member prop (parameter 0 (member * (root https://www.npmjs.com/package/lib)))) |
+| (return (member source *)) | (return (member sanitize *)) | (member prop (parameter 0 (member sink2 (root https://www.npmjs.com/package/lib)))) |
+| (return (member source *)) | (return (member sanitize *)) | (member prop (parameter 0 (member sink2 *))) |
 | (return (member source *)) | (return (member sanitize *)) | (parameter 0 (member * (root https://www.npmjs.com/package/lib))) |
+| (return (member source *)) | (return (member sanitize *)) | (parameter 0 (member sink2 (root https://www.npmjs.com/package/lib))) |
+| (return (member source *)) | (return (member sanitize *)) | (parameter 0 (member sink2 *)) |
 | (return (member source *)) | (return (member sanitize *)) | (parameter 0 (member sink (root https://www.npmjs.com/package/lib))) |
 | (return (member source *)) | (return (member sanitize *)) | (parameter 0 (member sink *)) |
