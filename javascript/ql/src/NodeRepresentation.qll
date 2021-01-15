@@ -41,15 +41,6 @@ private DataFlow::Node getAnExport(string pkgName, string prop) {
   )
 }
 
-private DataFlow::Node rhs(DataFlow::PropWrite pw) {
-  exists(DataFlow::Node rhs | rhs = pw.getRhs() |
-    result = rhs.getALocalSource()
-    or
-    not exists(rhs.getAPredecessor()) and
-    result = rhs
-  )
-}
-
 /**
  * Gets a candidate representation of `nd` as a (suffix of an) access path.
  */
@@ -69,7 +60,7 @@ string candidateRep(DataFlow::Node nd, int depth, boolean asRhs) {
     pkg.regexpMatch("[^./].*") and
     asRhs = false
     or
-    nd = getAnExport(pkg).getALocalSource() and
+    nd = getAnExport(pkg) and
     asRhs = true
   |
     result = "(root https://www.npmjs.com/package/" + pkg + ")" and
@@ -98,7 +89,7 @@ string candidateRep(DataFlow::Node nd, int depth, boolean asRhs) {
       asRhs = false
       or
       prop = base.getAPropertyWrite() and
-      nd = rhs(prop) and
+      nd = prop.(DataFlow::PropWrite).getRhs() and
       asRhs = true
     |
       step = "member " + prop.getPropertyName()
@@ -137,7 +128,7 @@ string candidateRep(DataFlow::Node nd, int depth, boolean asRhs) {
     or
     // return values
     (
-      nd = base.(DataFlow::FunctionNode).getAReturn().getALocalSource() and
+      nd = base.(DataFlow::FunctionNode).getAReturn() and
       asRhs = true
       or
       nd = base.getAnInvocation() and
@@ -149,7 +140,7 @@ string candidateRep(DataFlow::Node nd, int depth, boolean asRhs) {
   // named exports, which are treated as members of packages
   isRelevant(nd) and
   exists(string pkg, string m, string baserep |
-    nd = getAnExport(pkg, m).getALocalSource() and
+    nd = getAnExport(pkg, m) and
     baserep = "(root https://www.npmjs.com/package/" + pkg + ")" and
     result = "(member " + m + " " + [baserep, "*"] + ")" and
     depth = 2 and
@@ -164,7 +155,7 @@ string candidateRep(DataFlow::Node nd, int depth, boolean asRhs) {
     or
     exists(AssignExpr assgn |
       assgn.getLhs() = DataFlow::globalVarRef(g).asExpr() and
-      nd = assgn.getRhs().flow().getALocalSource()
+      nd = assgn.getRhs().flow()
     ) and
     asRhs = true
   |
