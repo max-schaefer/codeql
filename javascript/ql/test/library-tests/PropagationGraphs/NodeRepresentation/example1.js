@@ -12,4 +12,11 @@ module.exports.f = function () { // candidateRep: rhs (member f (member exports 
     return 0; // candidateRep: rhs (return (member f (member exports *)))
 };
 
-module.exports = 0; // candidateRep: rhs (member exports *)
+if(Math.random() > .5) {
+    module.exports = null; // candidateRep: rhs (member exports *)
+} else {
+    var exp = {
+        g: function() {} // candidateRep: rhs (member g (member exports *))
+    };
+    module.exports = exp;
+}

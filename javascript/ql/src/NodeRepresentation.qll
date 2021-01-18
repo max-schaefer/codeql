@@ -70,7 +70,14 @@ string candidateRep(DataFlow::Node nd, int depth, boolean asRhs) {
   // compound representations
   exists(DataFlow::SourceNode base, string step, string baserep |
     (
-      baserep = candidateRep(base, depth - 1, _) and
+      (
+        baserep = candidateRep(base, depth - 1, false)
+        or
+        exists(DataFlow::Node rhs |
+          baserep = candidateRep(rhs, depth - 1, true) and
+          base = rhs.getALocalSource()
+        )
+      ) and
       // bound maximum depth of candidate representation
       depth <= maxdepth()
       or
