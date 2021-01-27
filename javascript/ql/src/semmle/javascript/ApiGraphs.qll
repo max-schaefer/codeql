@@ -924,16 +924,10 @@ module API {
     Node getLastParameter() { result = getParameter(getNumArgument() - 1) }
 
     /** Gets the API node for the return value of this call. */
-    Node getReturn() {
-      result = callee.getReturn() and
-      result.getAnImmediateUse() = this
-    }
+    Node getReturn() { result.getAnImmediateUse() = this }
 
     /** Gets the API node for the object constructed by this invocation. */
-    Node getInstance() {
-      result = callee.getInstance() and
-      result.getAnImmediateUse() = this
-    }
+    Node getInstance() { result.getAnImmediateUse() = this }
   }
 
   /** A call connected to the API graph. */
