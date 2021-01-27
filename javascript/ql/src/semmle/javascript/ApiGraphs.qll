@@ -725,7 +725,7 @@ module API {
       boundArgs = 0
       or
       exists(DataFlow::CallNode promisify |
-        promisify = DataFlow::moduleImport(["util", "bluebird"]).getAMemberCall("promisify")
+        promisify = API::moduleImport(["util", "bluebird"]).getMember("promisify").getACall()
       |
         trackUseNode(nd, false, boundArgs, t.continue()).flowsTo(promisify.getArgument(0)) and
         promisified = true and
@@ -735,7 +735,7 @@ module API {
       exists(DataFlow::PartialInvokeNode pin, DataFlow::Node pred, int predBoundArgs |
         trackUseNode(nd, promisified, predBoundArgs, t.continue()).flowsTo(pred) and
         result = pin.getBoundFunction(pred, boundArgs - predBoundArgs) and
-        boundArgs in [0 .. 10]
+        boundArgs <= 10
       )
       or
       exists(StepSummary summary |
@@ -801,8 +801,7 @@ module API {
 
     private DataFlow::SourceNode awaited(DataFlow::InvokeNode call, DataFlow::TypeTracker t) {
       t.startInPromise() and
-      exists(MkSyntheticCallbackArg(_, _, call)) and
-      result = call
+      exists(MkSyntheticCallbackArg(_, _, call))
       or
       exists(DataFlow::TypeTracker t2 | result = awaited(call, t2).track(t2, t))
     }
