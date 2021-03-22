@@ -374,6 +374,8 @@ module API {
             exists(SSA::implicitInit([nm.getModuleVariable(), nm.getExportsVariable()]))
           )
         )
+        or
+        any(TypeDefinition td).getTypeName().hasQualifiedName(m, _)
       } or
       MkModuleImport(string m) {
         imports(_, m)
@@ -388,6 +390,10 @@ module API {
       } or
       MkDef(DataFlow::Node nd) { rhs(_, _, nd) } or
       MkUse(DataFlow::Node nd) { use(_, _, nd) } or
+      /** A definition of a TypeScript type. */
+      MkTypeDef(string moduleName, string exportName) {
+        exists(TypeDefinition td | td.getTypeName().hasQualifiedName(moduleName, exportName))
+      } or
       /** A use of a TypeScript type. */
       MkTypeUse(string moduleName, string exportName) {
         any(TypeAnnotation n).hasQualifiedName(moduleName, exportName)
@@ -401,7 +407,8 @@ module API {
     class TDef = MkModuleDef or TNonModuleDef;
 
     class TNonModuleDef =
-      MkModuleExport or MkClassInstance or MkAsyncFuncResult or MkDef or MkSyntheticCallbackArg;
+      MkModuleExport or MkClassInstance or MkAsyncFuncResult or MkDef or MkTypeDef or
+          MkSyntheticCallbackArg;
 
     class TUse = MkModuleUse or MkModuleImport or MkUse or MkTypeUse;
 
@@ -818,6 +825,10 @@ module API {
       )
       or
       exists(string moduleName, string exportName |
+        pred = MkModuleExport(moduleName) and
+        lbl = Label::member(exportName) and
+        succ = MkTypeDef(moduleName, exportName)
+        or
         pred = MkModuleImport(moduleName) and
         lbl = Label::member(exportName) and
         succ = MkTypeUse(moduleName, exportName)
