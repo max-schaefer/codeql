@@ -313,7 +313,7 @@ module API {
   module Node {
     /** Gets a node whose type has the given qualified name. */
     Node ofType(string moduleName, string exportedName) {
-      result = Impl::MkHasUnderlyingType(moduleName, exportedName).(Node).getInstance()
+      result = Impl::MkTypeUse(moduleName, exportedName).(Node).getInstance()
     }
   }
 
@@ -374,13 +374,15 @@ module API {
             exists(SSA::implicitInit([nm.getModuleVariable(), nm.getExportsVariable()]))
           )
         )
+        or
+        any(TypeDefinition td).getTypeName().hasQualifiedName(m, _)
       } or
       MkModuleImport(string m) {
         imports(_, m)
         or
         any(TypeAnnotation n).hasQualifiedName(m, _)
         or
-        any(Type t).hasUnderlyingType(m, _)
+        any(DataFlow::Node n).hasUnderlyingType(m, _)
       } or
       MkClassInstance(DataFlow::ClassNode cls) { cls = trackDefNode(_) and hasSemantics(cls) } or
       MkAsyncFuncResult(DataFlow::FunctionNode f) {
@@ -388,14 +390,15 @@ module API {
       } or
       MkDef(DataFlow::Node nd) { rhs(_, _, nd) } or
       MkUse(DataFlow::Node nd) { use(_, _, nd) } or
-      /**
-       * A TypeScript type, identified by name of the type-annotation.
-       * This API node is exclusively used by `API::Node::ofType`.
-       */
-      MkHasUnderlyingType(string moduleName, string exportName) {
+      /** A definition of a TypeScript type. */
+      MkTypeDef(string moduleName, string exportName) {
+        exists(TypeDefinition td | td.getTypeName().hasQualifiedName(moduleName, exportName))
+      } or
+      /** A use of a TypeScript type. */
+      MkTypeUse(string moduleName, string exportName) {
         any(TypeAnnotation n).hasQualifiedName(moduleName, exportName)
         or
-        any(Type t).hasUnderlyingType(moduleName, exportName)
+        exists(DataFlow::Node nd | nd.hasUnderlyingType(moduleName, exportName))
       } or
       MkSyntheticCallbackArg(DataFlow::Node src, int bound, DataFlow::InvokeNode nd) {
         trackUseNode(src, true, bound).flowsTo(nd.getCalleeNode())
@@ -404,9 +407,10 @@ module API {
     class TDef = MkModuleDef or TNonModuleDef;
 
     class TNonModuleDef =
-      MkModuleExport or MkClassInstance or MkAsyncFuncResult or MkDef or MkSyntheticCallbackArg;
+      MkModuleExport or MkClassInstance or MkAsyncFuncResult or MkDef or MkTypeDef or
+          MkSyntheticCallbackArg;
 
-    class TUse = MkModuleUse or MkModuleImport or MkUse or MkHasUnderlyingType;
+    class TUse = MkModuleUse or MkModuleImport or MkUse or MkTypeUse;
 
     private predicate hasSemantics(DataFlow::Node nd) { not nd.getTopLevel().isExterns() }
 
@@ -584,7 +588,7 @@ module API {
         )
         or
         exists(string moduleName, string exportName |
-          base = MkHasUnderlyingType(moduleName, exportName) and
+          base = MkTypeUse(moduleName, exportName) and
           lbl = Label::instance() and
           ref.(DataFlow::SourceNode).hasUnderlyingType(moduleName, exportName)
         )
@@ -821,9 +825,13 @@ module API {
       )
       or
       exists(string moduleName, string exportName |
+        pred = MkModuleExport(moduleName) and
+        lbl = Label::member(exportName) and
+        succ = MkTypeDef(moduleName, exportName)
+        or
         pred = MkModuleImport(moduleName) and
         lbl = Label::member(exportName) and
-        succ = MkHasUnderlyingType(moduleName, exportName)
+        succ = MkTypeUse(moduleName, exportName)
       )
       or
       exists(DataFlow::Node nd, DataFlow::FunctionNode f |

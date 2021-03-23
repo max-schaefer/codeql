@@ -1,0 +1,6 @@
+{
+    "name": "typescript-test",
+    "dependencies": {
+        "mongoose": "*"
+    }
+}

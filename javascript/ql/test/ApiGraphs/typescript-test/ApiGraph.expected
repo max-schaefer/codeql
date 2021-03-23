@@ -1,0 +1,19 @@
+#-----| root
+#-----| module mongoose -> use (module mongoose)
+#-----| module typescript-test -> def (module typescript-test)
+
+#-----| def (module typescript-test)
+#-----| member exports -> def (member exports (module typescript-test))
+
+#-----| use (module mongoose)
+#-----| member exports -> use (member exports (module mongoose))
+
+#-----| def (member exports (module typescript-test))
+#-----| member Sized -> def (member Sized (member exports (module typescript-test)))
+
+#-----| use (member exports (module mongoose))
+#-----| member Model -> use (member Model (member exports (module mongoose)))
+
+#-----| def (member Sized (member exports (module typescript-test)))
+
+#-----| use (member Model (member exports (module mongoose)))
