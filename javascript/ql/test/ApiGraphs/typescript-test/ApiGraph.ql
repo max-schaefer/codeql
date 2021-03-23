@@ -41,6 +41,9 @@ int labelRank(API::Node pred, string lbl, API::Node succ) {
 }
 
 query predicate nodes(API::Node f, string key, string value) {
+  key = "semmle.label" and
+  value = f.toString()
+  or
   key = "semmle.order" and
   value = nodeRank(f).toString()
 }
