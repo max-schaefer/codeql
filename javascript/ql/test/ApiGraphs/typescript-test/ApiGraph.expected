@@ -1,6 +1,7 @@
 #-----| root
 #-----| module mongoose -> use (module mongoose)
 #-----| module typescript-test -> def (module typescript-test)
+#-----| module typescript-test -> use (module typescript-test)
 
 #-----| def (module typescript-test)
 #-----| member exports -> def (member exports (module typescript-test))
@@ -8,16 +9,51 @@
 #-----| use (module mongoose)
 #-----| member exports -> use (member exports (module mongoose))
 
+#-----| use (module typescript-test)
+#-----| member exports -> use (member exports (module typescript-test))
+
 #-----| def (member exports (module typescript-test))
+#-----| member AccessLevel -> def (member AccessLevel (member exports (module typescript-test)))
+#-----| member AccessLevel -> def (member AccessLevel (member exports (module typescript-test)))
+#-----| member AccessLevel.Boss -> def (member AccessLevel.Boss (member exports (module typescript-test)))
+#-----| member AccessLevel.None -> def (member AccessLevel.None (member exports (module typescript-test)))
+#-----| member AccessLevel.Read -> def (member AccessLevel.Read (member exports (module typescript-test)))
+#-----| member AccessLevel.ReadWrite -> def (member AccessLevel.ReadWrite (member exports (module typescript-test)))
+#-----| member AccessLevel.Write -> def (member AccessLevel.Write (member exports (module typescript-test)))
 #-----| member MyModel -> def (member MyModel (member exports (module typescript-test)))
 #-----| member Sized -> def (member Sized (member exports (module typescript-test)))
 
 #-----| use (member exports (module mongoose))
 #-----| member Model -> use (member Model (member exports (module mongoose)))
 
+#-----| use (member exports (module typescript-test))
+#-----| member AccessLevel -> use (member AccessLevel (member exports (module typescript-test)))
+
+index.ts:
+#   10| def (member AccessLevel (member exports (module typescript-test)))
+
+#-----| def (member AccessLevel (member exports (module typescript-test)))
+#-----| member Boss -> def (member AccessLevel.Boss (member exports (module typescript-test)))
+#-----| member None -> def (member AccessLevel.None (member exports (module typescript-test)))
+#-----| member Read -> def (member AccessLevel.Read (member exports (module typescript-test)))
+#-----| member ReadWrite -> def (member AccessLevel.ReadWrite (member exports (module typescript-test)))
+#-----| member Write -> def (member AccessLevel.Write (member exports (module typescript-test)))
+
+#-----| def (member AccessLevel.Boss (member exports (module typescript-test)))
+
+#-----| def (member AccessLevel.None (member exports (module typescript-test)))
+
+#-----| def (member AccessLevel.Read (member exports (module typescript-test)))
+
+#-----| def (member AccessLevel.ReadWrite (member exports (module typescript-test)))
+
+#-----| def (member AccessLevel.Write (member exports (module typescript-test)))
+
 #-----| def (member MyModel (member exports (module typescript-test)))
 #-----|  -> use (member Model (member exports (module mongoose)))
 
 #-----| def (member Sized (member exports (module typescript-test)))
+
+#-----| use (member AccessLevel (member exports (module typescript-test)))
 
 #-----| use (member Model (member exports (module mongoose)))

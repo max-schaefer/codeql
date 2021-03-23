@@ -860,6 +860,18 @@ module API {
         lbl = Label::parameter(bound + call.getNumArgument()) and
         succ = MkSyntheticCallbackArg(src, bound, call)
       )
+      or
+      exists(
+        EnumDeclaration ed, string moduleName, string exportName, string m, EnumMember mb,
+        string otherModuleName, string otherExportName
+      |
+        ed.(TypeDefinition).getTypeName().hasQualifiedName(moduleName, exportName) and
+        ed.getMemberByName(m) = mb and
+        mb.(TypeDefinition).getTypeName().hasQualifiedName(otherModuleName, otherExportName) and
+        pred = MkTypeDef(moduleName, exportName) and
+        lbl = Label::member(m) and
+        succ = MkTypeDef(otherModuleName, otherExportName)
+      )
     }
 
     /**
