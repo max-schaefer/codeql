@@ -513,6 +513,14 @@ module API {
         |
           lbl = Label::memberFromRef(pw)
         )
+        or
+        exists(EnumMember mb, string moduleName, string exportedName |
+          mb.(TypeDefinition).getTypeName().hasQualifiedName(moduleName, exportedName)
+        |
+          base = MkTypeDef(moduleName, exportedName) and
+          lbl = Label::instance() and
+          rhs = mb.getInitializer().flow()
+        )
       )
     }
 

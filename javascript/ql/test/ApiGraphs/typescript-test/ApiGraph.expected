@@ -40,14 +40,18 @@ index.ts:
 #-----| member Write -> def (member AccessLevel.Write (member exports (module typescript-test)))
 
 #-----| def (member AccessLevel.Boss (member exports (module typescript-test)))
+#-----| instance -> def (instance (member AccessLevel.Boss (member exports (module typescript-test))))
 
 #-----| def (member AccessLevel.None (member exports (module typescript-test)))
 
 #-----| def (member AccessLevel.Read (member exports (module typescript-test)))
+#-----| instance -> def (instance (member AccessLevel.Read (member exports (module typescript-test))))
 
 #-----| def (member AccessLevel.ReadWrite (member exports (module typescript-test)))
+#-----| instance -> def (instance (member AccessLevel.ReadWrite (member exports (module typescript-test))))
 
 #-----| def (member AccessLevel.Write (member exports (module typescript-test)))
+#-----| instance -> def (instance (member AccessLevel.Write (member exports (module typescript-test))))
 
 #-----| def (member MyModel (member exports (module typescript-test)))
 #-----|  -> use (member Model (member exports (module mongoose)))
@@ -57,3 +61,11 @@ index.ts:
 #-----| use (member AccessLevel (member exports (module typescript-test)))
 
 #-----| use (member Model (member exports (module mongoose)))
+
+#   15| def (instance (member AccessLevel.Boss (member exports (module typescript-test))))
+
+#   12| def (instance (member AccessLevel.Read (member exports (module typescript-test))))
+
+#   14| def (instance (member AccessLevel.ReadWrite (member exports (module typescript-test))))
+
+#   13| def (instance (member AccessLevel.Write (member exports (module typescript-test))))
