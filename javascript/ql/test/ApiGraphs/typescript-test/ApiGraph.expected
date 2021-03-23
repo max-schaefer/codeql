@@ -9,10 +9,14 @@
 #-----| member exports -> use (member exports (module mongoose))
 
 #-----| def (member exports (module typescript-test))
+#-----| member MyModel -> def (member MyModel (member exports (module typescript-test)))
 #-----| member Sized -> def (member Sized (member exports (module typescript-test)))
 
 #-----| use (member exports (module mongoose))
 #-----| member Model -> use (member Model (member exports (module mongoose)))
+
+#-----| def (member MyModel (member exports (module typescript-test)))
+#-----|  -> use (member Model (member exports (module mongoose)))
 
 #-----| def (member Sized (member exports (module typescript-test)))
 

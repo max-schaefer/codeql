@@ -219,7 +219,21 @@ module API {
      * In other words, the value of a use of `that` may flow into the right-hand side of a
      * definition of this node.
      */
-    predicate refersTo(Node that) { this.getARhs() = that.getAUse() }
+    predicate refersTo(Node that) {
+      // value aliasing
+      this.getARhs() = that.getAUse()
+      or
+      // type aliasing
+      exists(
+        string moduleName, string exportName, TypeDefinition td, string otherModuleName,
+        string otherExportName
+      |
+        this = Impl::MkTypeDef(moduleName, exportName) and
+        td.getTypeName().hasQualifiedName(moduleName, exportName) and
+        td.(TypeAliasDeclaration).getDefinition().hasQualifiedName(otherModuleName, otherExportName) and
+        that = Impl::MkTypeUse(otherModuleName, otherExportName)
+      )
+    }
 
     /**
      * Gets the data-flow node that gives rise to this node, if any.

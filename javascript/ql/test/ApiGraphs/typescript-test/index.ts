@@ -4,3 +4,5 @@ export interface Sized {
 
 import * as mongoose from "mongoose";
 var myModel : mongoose.Model;
+
+export type MyModel = mongoose.Model;
