@@ -14,3 +14,12 @@ export enum AccessLevel {
   ReadWrite = Read | Write,
   Boss = "123".length,
 };
+
+export class Point {
+  x: number;
+  y: number;
+
+  distanceFrom(point: Point) {
+    return Math.sqrt((this.x - point.x) ** 2 + (this.y - point.y) ** 2);
+  }
+}

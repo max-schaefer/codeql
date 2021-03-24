@@ -21,6 +21,8 @@
 #-----| member AccessLevel.ReadWrite -> def (member AccessLevel.ReadWrite (member exports (module typescript-test)))
 #-----| member AccessLevel.Write -> def (member AccessLevel.Write (member exports (module typescript-test)))
 #-----| member MyModel -> def (member MyModel (member exports (module typescript-test)))
+#-----| member Point -> def (member Point (member exports (module typescript-test)))
+#-----| member Point -> def (member Point (member exports (module typescript-test)))
 #-----| member Sized -> def (member Sized (member exports (module typescript-test)))
 
 #-----| use (member exports (module mongoose))
@@ -28,6 +30,7 @@
 
 #-----| use (member exports (module typescript-test))
 #-----| member AccessLevel -> use (member AccessLevel (member exports (module typescript-test)))
+#-----| member Point -> use (member Point (member exports (module typescript-test)))
 
 index.ts:
 #   10| def (member AccessLevel (member exports (module typescript-test)))
@@ -56,11 +59,20 @@ index.ts:
 #-----| def (member MyModel (member exports (module typescript-test)))
 #-----|  -> use (member Model (member exports (module mongoose)))
 
+#   18| def (member Point (member exports (module typescript-test)))
+#-----| instance -> def (instance (member Point (member exports (module typescript-test))))
+
+#-----| def (member Point (member exports (module typescript-test)))
+#-----| instance -> def (instance (member Point (member exports (module typescript-test))))
+
 #-----| def (member Sized (member exports (module typescript-test)))
 
 #-----| use (member AccessLevel (member exports (module typescript-test)))
 
 #-----| use (member Model (member exports (module mongoose)))
+
+#-----| use (member Point (member exports (module typescript-test)))
+#-----| instance -> use (instance (member Point (member exports (module typescript-test))))
 
 #   15| def (instance (member AccessLevel.Boss (member exports (module typescript-test))))
 
@@ -69,3 +81,31 @@ index.ts:
 #   14| def (instance (member AccessLevel.ReadWrite (member exports (module typescript-test))))
 
 #   13| def (instance (member AccessLevel.Write (member exports (module typescript-test))))
+
+#   18| def (instance (member Point (member exports (module typescript-test))))
+#-----| member distanceFrom -> def (member distanceFrom (instance (member Point (member exports (module typescript-test)))))
+#-----| member x -> use (member x (instance (member Point (member exports (module typescript-test)))))
+#-----| member y -> use (member y (instance (member Point (member exports (module typescript-test)))))
+
+#   22| use (instance (member Point (member exports (module typescript-test))))
+#-----| member x -> use (member x (instance (member Point (member exports (module typescript-test)))))
+#-----| member y -> use (member y (instance (member Point (member exports (module typescript-test)))))
+
+#   22| def (member distanceFrom (instance (member Point (member exports (module typescript-test)))))
+#-----| parameter -1 -> use (parameter -1 (member distanceFrom (instance (member Point (member exports (module typescript-test))))))
+#-----| parameter 0 -> use (instance (member Point (member exports (module typescript-test))))
+#-----| return -> def (return (member distanceFrom (instance (member Point (member exports (module typescript-test))))))
+
+#   23| use (member x (instance (member Point (member exports (module typescript-test)))))
+
+#   23| use (member x (instance (member Point (member exports (module typescript-test)))))
+
+#   23| use (member y (instance (member Point (member exports (module typescript-test)))))
+
+#   23| use (member y (instance (member Point (member exports (module typescript-test)))))
+
+#   23| def (return (member distanceFrom (instance (member Point (member exports (module typescript-test))))))
+
+#   22| use (parameter -1 (member distanceFrom (instance (member Point (member exports (module typescript-test))))))
+#-----| member x -> use (member x (instance (member Point (member exports (module typescript-test)))))
+#-----| member y -> use (member y (instance (member Point (member exports (module typescript-test)))))

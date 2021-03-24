@@ -558,6 +558,12 @@ module API {
       exists(string m | nd = MkModuleExport(m) | exports(m, rhs))
       or
       nd = MkDef(rhs)
+      or
+      exists(string moduleName, string exportedName, TypeDefinition td |
+        nd =  MkTypeDef(moduleName, exportedName) and
+        td.getTypeName().hasQualifiedName(moduleName, exportedName) and
+        rhs = td.(ClassDefinition).flow()
+      )
     }
 
     /**
