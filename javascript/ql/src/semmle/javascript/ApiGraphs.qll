@@ -224,13 +224,9 @@ module API {
       this.getARhs() = that.getAUse()
       or
       // type aliasing
-      exists(
-        string moduleName, string exportName, TypeDefinition td, string otherModuleName,
-        string otherExportName
-      |
-        this = Impl::MkTypeDef(moduleName, exportName) and
-        td.getTypeName().hasQualifiedName(moduleName, exportName) and
-        td.(TypeAliasDeclaration).getDefinition().hasQualifiedName(otherModuleName, otherExportName) and
+      exists(TypeAliasDeclaration td, string otherModuleName, string otherExportName |
+        this = Impl::mkTypeDef(td) and
+        td.getDefinition().hasQualifiedName(otherModuleName, otherExportName) and
         that = Impl::MkTypeUse(otherModuleName, otherExportName)
       )
     }
@@ -389,7 +385,7 @@ module API {
           )
         )
         or
-        any(TypeDefinition td).getTypeName().hasQualifiedName(m, _)
+        exists(getExportedTypeDef(m, _))
       } or
       MkModuleImport(string m) {
         imports(_, m)
@@ -406,7 +402,7 @@ module API {
       MkUse(DataFlow::Node nd) { use(_, _, nd) } or
       /** A definition of a TypeScript type. */
       MkTypeDef(string moduleName, string exportName) {
-        exists(TypeDefinition td | td.getTypeName().hasQualifiedName(moduleName, exportName))
+        exists(getExportedTypeDef(moduleName, exportName))
       } or
       /** A use of a TypeScript type. */
       MkTypeUse(string moduleName, string exportName) {
@@ -444,6 +440,20 @@ module API {
         result = pkg.getMainModule() and
         not result.isExterns() and
         m = pkg.getPackageName()
+      )
+    }
+
+    /** Gets a type definition with the given qualified name. */
+    private TypeDefinition getExportedTypeDef(string moduleName, string exportName) {
+      result.getTypeName().hasQualifiedName(moduleName, exportName)
+    }
+
+    /** Gets an API node corresponding to the given type definition. */
+    cached
+    MkTypeDef mkTypeDef(TypeDefinition td) {
+      exists(string moduleName, string exportName |
+        td = getExportedTypeDef(moduleName, exportName) and
+        result = MkTypeDef(moduleName, exportName)
       )
     }
 
@@ -515,7 +525,7 @@ module API {
         )
         or
         exists(EnumMember mb, string moduleName, string exportedName |
-          mb.(TypeDefinition).getTypeName().hasQualifiedName(moduleName, exportedName)
+          mb = getExportedTypeDef(moduleName, exportedName)
         |
           base = MkTypeDef(moduleName, exportedName) and
           lbl = Label::instance() and
@@ -560,8 +570,8 @@ module API {
       nd = MkDef(rhs)
       or
       exists(string moduleName, string exportedName, TypeDefinition td |
-        nd =  MkTypeDef(moduleName, exportedName) and
-        td.getTypeName().hasQualifiedName(moduleName, exportedName) and
+        nd = MkTypeDef(moduleName, exportedName) and
+        td = getExportedTypeDef(moduleName, exportedName) and
         rhs = td.(ClassDefinition).flow()
       )
     }
@@ -879,9 +889,9 @@ module API {
         EnumDeclaration ed, string moduleName, string exportName, string m, EnumMember mb,
         string otherModuleName, string otherExportName
       |
-        ed.(TypeDefinition).getTypeName().hasQualifiedName(moduleName, exportName) and
+        ed = getExportedTypeDef(moduleName, exportName) and
         ed.getMemberByName(m) = mb and
-        mb.(TypeDefinition).getTypeName().hasQualifiedName(otherModuleName, otherExportName) and
+        mb = getExportedTypeDef(otherModuleName, otherExportName) and
         pred = MkTypeDef(moduleName, exportName) and
         lbl = Label::member(m) and
         succ = MkTypeDef(otherModuleName, otherExportName)
